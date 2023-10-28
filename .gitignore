@@ -1,0 +1,14 @@
+.idea
+
+**/__pycache__/
+
+# TODO
+result/
+
+*.npy
+
+*.pth
+
+*.out
+
+data
