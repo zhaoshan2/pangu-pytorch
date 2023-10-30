@@ -4,6 +4,7 @@
 
 # TODO
 result/
+fig/
 
 *.npy
 
