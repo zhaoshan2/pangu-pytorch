@@ -1,6 +1,6 @@
 # pangu-pytorch
 
-This represents our initial attempt to replicate the Pangu-Weather model as detailed in the work by Bi et al. (2023). Our implementation closely adheres to the pseudocode provided in the GitHub repository at https://github.com/198808xc/Pangu-Weather. We have made specific adjustments to certain components, such as the PatchEmbedding and PatchRecovery layers, in alignment with the pretrained weights available in ONNX files. Notably, the attention mask is not utilized in our current implementation.
+This represents our initial attempt to replicate the Pangu-Weather model as detailed in the work by Bi et al. (2023). Our implementation closely adheres to the pseudocode provided in the GitHub repository at https://github.com/198808xc/Pangu-Weather. We have made specific adjustments to certain components, such as the PatchEmbedding and PatchRecovery layers, in alignment with the pretrained weights available in ONNX files.
 
 It is worth noting that ONLY LATITUDE WEIGHTED RMSE is computed, compared, and validated.
 
