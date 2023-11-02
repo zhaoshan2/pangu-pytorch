@@ -27,7 +27,7 @@ class PatchEmbedding_pretrain(nn.Module):
     _, _, h, w = x.size()
     mod_pad_h = (self.window_size[1] - h % self.window_size[1]) % self.window_size[1]  # 6
     mod_pad_w = (self.window_size[2] - w % self.window_size[2]) % self.window_size[2]
-    x = F.pad(x, (0, mod_pad_w, 0, 3), 'reflect')
+    x = F.pad(x, (0, mod_pad_w, 0, 3), 'constant')
     # x = self.Pad2D(x)
     return x
 
@@ -36,7 +36,7 @@ class PatchEmbedding_pretrain(nn.Module):
     mod_pad_d = (self.window_size[0] - h % self.window_size[0]) % self.window_size[0]
     mod_pad_h = (self.window_size[1] - h % self.window_size[1]) % self.window_size[1]
     mod_pad_w = (self.window_size[2] - w % self.window_size[2]) % self.window_size[2]
-    x = F.pad(x, (0, 0, 0, 3, 0, 1), 'reflect')
+    x = F.pad(x, (0, 0, 0, 3, 0, 1), 'constant')
     # x = self.Pad3D(x)
     return x
 
@@ -159,11 +159,16 @@ class EarthSpecificBlock(nn.Module):
     mB, mZ, mH, mW, mC = img_mask.shape
     # 1x8x96x180x1
     cnt = 0
-    for d in slice(-self.window_size[0]), slice(-self.window_size[0], -self.window_size[0]//2), slice(-self.window_size[0]//2,None):
-      for h in slice(-self.window_size[1]), slice(-self.window_size[1], -self.window_size[1]//2), slice(-self.window_size[1]//2,None):
-        for w in slice(-self.window_size[2]), slice(-self.window_size[2], -self.window_size[2]//2), slice(-self.window_size[2]//2,None):
-            img_mask[:, d, h, w, :] = cnt
-            cnt += 1
+    z_slices = (slice(0, -self.window_size[0]),
+                slice(-self.window_size[0], -self.window_size[0] // 2),
+                slice(-self.window_size[0] // 2, None))
+    h_slices = (slice(0, -self.window_size[1]),
+                slice(self.window_size[1], -self.window_size[1] // 2),
+                slice(-self.window_size[1] // 2, None))
+    for z in z_slices:
+      for h in h_slices:
+        img_mask[:, z, h, :, :] = cnt
+        cnt += 1
     img_mask = img_mask.reshape(1, mZ // self.window_size[0], self.window_size[0], mH // self.window_size[1],
                                 self.window_size[1], mW // self.window_size[2], self.window_size[2], 1)
     img_mask = torch.permute(img_mask, (0, 5, 1, 3, 2, 4, 6, 7))
@@ -176,8 +181,7 @@ class EarthSpecificBlock(nn.Module):
     attn_mask = mask_windows.unsqueeze(2) - mask_windows.unsqueeze(3)
     attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
 
-    mask = attn_mask
-    return mask
+    return attn_mask
 
   def forward(self, x, Z, H, W, roll):
     # Save the shortcut for skip-connection
@@ -188,7 +192,7 @@ class EarthSpecificBlock(nn.Module):
 
     # Zero-pad input if needed
     # x = self.pad3D(x) #torch.Size([1, 8, 186, 360, 192]) - [1, 8, 96, 180, 384]
-    x = F.pad(x, (0, 0, 0, 0, self.padding_front,  self.padding_back), 'reflect')
+    x = F.pad(x, (0, 0, 0, 0, self.padding_front,  self.padding_back), 'constant')
 
 
     ori_shape = x.shape
@@ -204,8 +208,8 @@ class EarthSpecificBlock(nn.Module):
       """
       To do: generate mask
       """
-      # mask = self.gen_mask(x)
-      mask = None
+      mask = self.gen_mask(x)
+      # mask = None
 
     else:
       # e.g., zero matrix when you add mask to attention
@@ -437,7 +441,7 @@ class DownSample(nn.Module):# can check siwnir's up and downsample
     # Padding the input to facilitate downsampling
 
     # x = self.Pad3D(x)#[1, 8, 182, 360, 192])
-    x = F.pad(x, (0, 0, 0, 0, 0, 1), 'reflect')
+    x = F.pad(x, (0, 0, 0, 0, 0, 1), 'constant')
 
     # Reorganize x to reduce the resolution: simply change the order and downsample from (8, 360, 182) to (8, 180, 91)
     # Reshape x to facilitate downsampling

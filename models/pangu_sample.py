@@ -202,6 +202,7 @@ def test(test_loader, model, device, res_path):
     batch_id = 0
     for id, data in enumerate(test_loader, 0):
         # Store initial input for different models
+        print(f"predict on {id}")
         input_test, input_surface_test, target_test, target_surface_test, periods_test = data
         input_test, input_surface_test, target_test, target_surface_test = \
             input_test.to(device), input_surface_test.to(device), target_test.to(device), target_surface_test.to(device)
@@ -243,7 +244,7 @@ def test(test_loader, model, device, res_path):
         target_test = target_test.squeeze()
         output_surface_test = output_surface_test.squeeze()
         target_surface_test = target_surface_test.squeeze()
-        """
+
         rmse_upper_z[target_time] = score.weighted_rmse_torch_channels(output_test[0],
                                                                        target_test[0]).detach().cpu().numpy()
         rmse_upper_q[target_time] = score.weighted_rmse_torch_channels(output_test[1],
@@ -257,7 +258,7 @@ def test(test_loader, model, device, res_path):
 
         rmse_surface[target_time] = score.weighted_rmse_torch_channels(output_surface_test,
                                                                        target_surface_test).detach().cpu().numpy()
-        """
+
 
         # acc
         surface_mean, _, upper_mean, _ = aux_constants['weather_statistics_last']
@@ -282,8 +283,8 @@ def test(test_loader, model, device, res_path):
     # Save rmses to csv
     csv_path = os.path.join(res_path, "csv")
     utils.mkdirs(csv_path)
-    # utils.save_errorScores(csv_path, rmse_upper_z, rmse_upper_q, rmse_upper_t, rmse_upper_u, rmse_upper_v, rmse_surface,
-    #                  "rmse")
+    utils.save_errorScores(csv_path, rmse_upper_z, rmse_upper_q, rmse_upper_t, rmse_upper_u, rmse_upper_v, rmse_surface,
+                     "rmse")
     utils.save_errorScores(csv_path, acc_upper_z, acc_upper_q, acc_upper_t, acc_upper_u, acc_upper_v, acc_surface, "acc")
 
 

@@ -26,7 +26,7 @@ if __name__ == "__main__":
     check the re-implemented model performance
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--type_net', type=str, default="reproduce")
+    parser.add_argument('--type_net', type=str, default="reproduce_mask0")
     args = parser.parse_args()
     starts  = time.time()
    
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
 
 
-    torch.set_num_threads(2)
+    torch.set_num_threads(16)
 
     model = PanguModel(device=device).to(device)
 
