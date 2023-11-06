@@ -1,31 +1,20 @@
 import sys
 sys.path.append("/home/code/pangu_torch")
 from era5_data import utils,utils_data
-from era5_data import score
 from era5_data.config import cfg
 from models.pangu_model import PanguModel
 import os
-import onnx
-import torch
-import onnx.numpy_helper as np_helper
-import os
-import torch
-import onnx
-import pandas as pd
 from torch.utils import data
 from models.pangu_sample import test, train
-from pathlib import Path
 import argparse
 import time
-import numpy as np
 import logging
-import copy
-from tensorboardX import SummaryWriter
-import pandas as pd
-import datetime
 import torch
 from torch import nn
 from peft import LoraConfig, get_peft_model
+"""
+This is to test the performance of PEFT model
+"""
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--type_net', type=str, default="lora")

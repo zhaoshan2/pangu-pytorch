@@ -3,27 +3,20 @@ import sys
 sys.path.append("/home/code/pangu_torch")
 from era5_data import utils, utils_data
 from era5_data.utils_dist import get_dist_info, init_dist
-from era5_data import score
 from era5_data.config import cfg
 from models.pangu_model import PanguModel
-import onnx
 import torch
-import onnx.numpy_helper as np_helper
 import os
-import pandas as pd
 from torch.utils import data
 from models.pangu_sample import test, train
-from pathlib import Path
 import argparse
 import time
-from onnxconverter_common import float16
-import numpy as np
 import logging
-import copy
 from tensorboardX import SummaryWriter
-import datetime
 from torch.utils.data.distributed import DistributedSampler
-
+"""
+Fully finetune the pretrained model
+"""
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--type_net', type=str, default="finetune_fully")

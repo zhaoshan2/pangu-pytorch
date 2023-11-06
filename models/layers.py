@@ -1,12 +1,9 @@
 # The pseudocode can be implemented using deep learning libraries, e.g., Pytorch and Tensorflow or other high-level APIs
 import sys
 sys.path.append("/home/code/pangu_torch")
-from era5_data import utils
-from era5_data.config import cfg
 from torch import nn
 import torch
 import torch.utils.checkpoint as checkpoint
-from torch.utils import data
 import torch.nn.functional as F
 
 from timm.models.layers import DropPath, trunc_normal_

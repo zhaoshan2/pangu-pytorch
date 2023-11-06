@@ -9,16 +9,16 @@ import torch
 import os
 from torch.utils import data
 from models.pangu_sample import test, train
-from pathlib import Path
 import argparse
 import time
 import logging
 import copy
 from tensorboardX import SummaryWriter
-import datetime
 from peft import LoraConfig, get_peft_model
 from torch.utils.data.distributed import DistributedSampler
-
+"""
+Finetune the model using parameter-efficient finetune (lora)
+"""
 
 
 if __name__ == "__main__":

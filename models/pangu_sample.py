@@ -1,24 +1,12 @@
-# The pseudocode can be implemented using deep learning libraries, e.g., Pytorch and Tensorflow or other high-level APIs
 import sys
-
 sys.path.append("/home/code/pangu_torch")
 from era5_data import utils, utils_data
-import logging
 from era5_data.config import cfg
 from torch import nn
 import torch
-from torch.utils import data
-import torch.nn.functional as F
-import numpy as np
 import copy
-import argparse
-import time
 from era5_data import score
 import os
-from tensorboardX import SummaryWriter
-import pandas as pd
-import datetime
-
 
 def train(model, train_loader, val_loader, optimizer, lr_scheduler, res_path, device, writer, logger, start_epoch,
           rank=0):
@@ -217,7 +205,7 @@ def test(test_loader, model, device, res_path):
                                                         aux_constants['weather_statistics_last'])
 
         target_time = periods_test[1][batch_id]
-        """
+
         # Visualize
         png_path = os.path.join(res_path, "png")
         utils.mkdirs(png_path)
@@ -237,7 +225,7 @@ def test(test_loader, model, device, res_path):
                             step=target_time,
                             path=png_path)
   
-        """
+
         # Compute test scores
         # rmse
         output_test = output_test.squeeze()
