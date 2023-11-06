@@ -9,6 +9,25 @@ To assess the accuracy of our model, we conducted comparative tests focusing on 
 
 The downloaded files shall be organized as the following hierarchy:
 
+<p align="left">
+  <img src="fig/VIS.png" width="600" title="Figure 1. Visualization of two sample results returned by the reproduced model.">
+</p>
+Figure 1. Visualization of two sample results returned by the reproduced model.
+  
+  
+  
+<p align="left">
+  <img src="fig/vis_onnx.png" width="600" title="Figure 2. Visualization of two sample results returned by the pretrained weights.">
+</p>
+Figure 2. Visualization of two sample results returned by the pretrained weights
+
+<p align="center">
+  <img src="fig/tab1.png" width="600">
+</p>
+<p align="center">
+  <img src="fig/tab2.png" width="600">
+</p>
+
 ```plain
 Data -----------------------------------------------
 ├── data_storage_home
@@ -37,21 +56,4 @@ Model ----------------------------------------------
 │   │   ├── 'reproduce': results returned by rebuilt torch models
 
 
-<p align="left">
-  <img src="fig/VIS.png" width="600" title="Figure 1. Visualization of two sample results returned by the reproduced model.">
-</p>
-Figure 1. Visualization of two sample results returned by the reproduced model.
-  
-  
-  
-<p align="left">
-  <img src="fig/vis_onnx.png" width="600" title="Figure 2. Visualization of two sample results returned by the pretrained weights.">
-</p>
-Figure 2. Visualization of two sample results returned by the pretrained weights
 
-<p align="center">
-  <img src="fig/tab1.png" width="600">
-</p>
-<p align="center">
-  <img src="fig/tab2.png" width="600">
-</p>
