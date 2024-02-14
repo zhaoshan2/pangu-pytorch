@@ -260,7 +260,7 @@ def test(test_loader, model, device, res_path):
         acc_upper_q[target_time] = score.weighted_acc_torch_channels(output_test_anomaly[1],
                                                                      target_test_anomaly[1]).detach().cpu().numpy()
         acc_upper_t[target_time] = score.weighted_acc_torch_channels(output_test_anomaly[2],
-                                                                     target_test[2]).detach().cpu().numpy()
+                                                                     target_test_anomaly[2]).detach().cpu().numpy()
         acc_upper_u[target_time] = score.weighted_acc_torch_channels(output_test_anomaly[3],
                                                                      target_test_anomaly[3]).detach().cpu().numpy()
         acc_upper_v[target_time] = score.weighted_acc_torch_channels(output_test_anomaly[4],
