@@ -26,6 +26,8 @@ Figure 2. Visualization of two sample results returned by the pretrained weights
   <img src="fig/tab2.png" width="600">
 </p>
 
+
+The pretrined_model, aux_data, and sample surface/upper data is available in HuggingFace https://huggingface.co/datasets/zhaoshan/pangu_pytorch
 ```plain
 Data -----------------------------------------------
 ├── data_storage_home
