@@ -125,7 +125,7 @@ if __name__ == "__main__":
         msg += utils.torch_summarize(model, show_weights=False)
         logger.info(msg)
 
-    weather_statistics = utils.LoadStatic_pretrain()
+    #weather_statistics = utils.LoadStatic_pretrain()
     if rank == 0:
         print("weather statistics are loaded!")
     torch.set_num_threads(cfg.GLOBAL.NUM_STREADS)
