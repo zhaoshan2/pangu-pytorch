@@ -17,3 +17,5 @@ data
 venv/
 
 *.log
+
+huggingface_data/
