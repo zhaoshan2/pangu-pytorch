@@ -1,10 +1,13 @@
 import sys
-sys.path.append("/home/code/pangu_torch")
+sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
 from torch import nn
 import torch
 from models.layers import *
 from collections import OrderedDict
 import torch.utils.checkpoint as checkpoint
+from era5_data import utils, utils_data
+
+
 class PanguModel(nn.Module):
   def __init__(self, depths = [2,6,6,2], num_heads = [6, 12, 12, 6], dims = [192, 384, 384, 192], patch_size = (2, 4, 4), device=None):
     super(PanguModel, self).__init__()
@@ -47,7 +50,7 @@ class PanguModel(nn.Module):
         nn.init.constant_(m.bias, 0)
         nn.init.constant_(m.weight, 1.0)  
 
-  def forward(self, input, input_surface, statistics, maps,const_h):
+  def forward(self, input, input_surface, statistics, maps, const_h):
     '''Backbone architecture'''
     # Embed the input fields into patches
     # input:(B, N, Z, H, W) ([1, 5, 13, 721, 1440])input_surface(B,N,H,W)([1, 4, 721, 1440])
@@ -94,7 +97,19 @@ if __name__ == '__main__':
 
     x_surface = torch.randn((1, 4, 721, 1440)).to(device)
     x_upper = torch.randn((1, 5, 13, 721, 1440)).to(device)
-    output, output_surface = model(x_upper, x_surface)
+    # output, output_surface = model(x_upper, x_surface)
+
+
+    aux_constants = utils.loadAllConstants(
+        device=device)  # 'weather_statistics','weather_statistics_last','constant_maps','tele_indices','variable_weights'
+    # Note the input and target need to be normalized (done within the function)
+    # Call the model and get the output
+    output, output_surface = model(x_upper, x_surface, aux_constants['weather_statistics'],
+                                    aux_constants['constant_maps'],
+                                    aux_constants['const_h'])  # (1,5,13,721,1440)
+
+
+
     # print(output)
     print(output.shape)
    

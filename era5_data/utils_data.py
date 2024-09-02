@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import sys
-sys.path.append("/home/code/pangu_torch")
+sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
 from era5_data.config import cfg
 
 from typing import Tuple, List
@@ -55,7 +55,7 @@ class NetCDFDataset(data.Dataset):
     """Dataset class for the era5 upper and surface variables."""
 
     def __init__(self,
-                 nc_path='/home/code/data_storage_home/data/pangu',
+                 nc_path='/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu',
                  data_transform=None,
                  seed=1234,
                  training=True,
@@ -211,7 +211,7 @@ class NetCDFDataset(data.Dataset):
         return self.__class__.__name__
 
 
-def weatherStatistics_output(filepath="/home/code/data_storage_home/data/pangu/aux_data", device="cpu"):
+def weatherStatistics_output(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
     """
     :return:1, 5, 13, 1, 1
     """
@@ -236,7 +236,7 @@ def weatherStatistics_output(filepath="/home/code/data_storage_home/data/pangu/a
         device)
 
 
-def weatherStatistics_input(filepath="/home/code/data_storage_home/data/pangu/aux_data", device="cpu"):
+def weatherStatistics_input(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
     """
     :return:13, 1, 1, 5
     """
@@ -265,7 +265,7 @@ def LoadConstantMask(filepath='/home/code/Pangu-Weather/constant_masks', device=
         device)  # torch.Size([1, 1, 721, 1440])
 
 
-def LoadConstantMask3(filepath="/home/code/data_storage_home/data/pangu/aux_data", device="cpu"):
+def LoadConstantMask3(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
     mask = np.load(os.path.join(filepath, "constantMaks3.npy")).astype(np.float32)
     mask = torch.from_numpy(mask)
     return mask.to(device)
@@ -288,7 +288,7 @@ def computeStatistics(train_loader):
     return weather_surface_mean, weather_surface_std, weather_mean, weather_std
 
 
-def loadConstMask_h(filepath="/home/code/data_storage_home/data/pangu/aux_data", device="cpu"):
+def loadConstMask_h(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
     mask_h = np.load(os.path.join(filepath, "Constant_17_output_0.npy")).astype(np.float32)
     mask_h = torch.from_numpy(mask_h)
     return mask_h.to(device)
@@ -330,7 +330,7 @@ def normBackData(upper, surface, statistics):
     return upper, surface
 
 if __name__ == "__main__":
-    # dataset_path ='/home/code/data_storage_home/data/pangu'
+    # dataset_path ='/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu'
     # means, std = LoadStatic(os.path.join(dataset_path, 'aux_data'))
     # print(means.shape) #(1, 21, 1, 1)
     a, b, c, d = weatherStatistics_input()

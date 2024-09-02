@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import sys
 
-sys.path.append("/home/code/pangu_torch")
+sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
 from era5_data.config import cfg
 from typing import Tuple, List
 import torch

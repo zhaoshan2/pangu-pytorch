@@ -13,3 +13,7 @@ fig/
 *.out
 
 data
+
+venv/
+
+*.log

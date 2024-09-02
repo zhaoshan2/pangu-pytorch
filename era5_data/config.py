@@ -9,7 +9,7 @@ cfg = __C
 __C.GLOBAL = edict()
 __C.GLOBAL.DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 __C.GLOBAL.BATCH_SZIE = 1
-for dirs in ['/home/code/pangu_torch', 'your_path']:
+for dirs in ['/home/scc/om1434/pangu_zhaoshan2', 'your_path']:
     if os.path.exists(dirs):
         __C.GLOBAL.PATH = dirs
 assert __C.GLOBAL.PATH is not None
@@ -18,7 +18,7 @@ __C.GLOBAL.NUM_STREADS = 16
 
 
 # __C.ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-__C.PG_INPUT_PATH = '/home/code/data_storage_home/data/pangu'
+__C.PG_INPUT_PATH = '/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu'
 assert __C.PG_INPUT_PATH is not None
 
 __C.PG_OUT_PATH = os.path.join(__C.GLOBAL.PATH,'result')
@@ -57,8 +57,8 @@ __C.PG.VAL.INTERVAL = 1
 
 __C.PG.TEST = edict()
 
-__C.PG.TEST.START_TIME = '20180103'
-__C.PG.TEST.END_TIME = '20180117'
+__C.PG.TEST.START_TIME = '20190701'
+__C.PG.TEST.END_TIME = '20190801'
 __C.PG.TEST.FREQUENCY = '12H'
 __C.PG.TEST.BATCH_SIZE = 1
 

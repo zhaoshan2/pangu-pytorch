@@ -1,6 +1,6 @@
 # The pseudocode can be implemented using deep learning libraries, e.g., Pytorch and Tensorflow or other high-level APIs
 import sys
-sys.path.append("/home/code/pangu_torch")
+sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
 from torch import nn
 import torch
 import torch.utils.checkpoint as checkpoint
