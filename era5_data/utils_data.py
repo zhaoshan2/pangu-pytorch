@@ -3,7 +3,9 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import sys
-sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
+import os
+print(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))))
 from era5_data.config import cfg
 
 from typing import Tuple, List
@@ -11,7 +13,6 @@ import torch
 import random
 from torch.utils import data
 from torchvision import transforms as T
-import os
 
 class DataPrefetcher():
     def __init__(self, loader):
@@ -55,7 +56,7 @@ class NetCDFDataset(data.Dataset):
     """Dataset class for the era5 upper and surface variables."""
 
     def __init__(self,
-                 nc_path='/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu',
+                 nc_path=cfg.PG_INPUT_PATH,
                  data_transform=None,
                  seed=1234,
                  training=True,
@@ -212,7 +213,7 @@ class NetCDFDataset(data.Dataset):
 
 
 def weatherStatistics_output(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
-    """
+    """ PG_INPUT_PATH
     :return:1, 5, 13, 1, 1
     """
     surface_mean = np.load(os.path.join(filepath, "surface_mean.npy")).astype(np.float32)
