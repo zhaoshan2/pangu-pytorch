@@ -211,8 +211,8 @@ class NetCDFDataset(data.Dataset):
         return self.__class__.__name__
 
 
-def weatherStatistics_output(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
-    """ PG_INPUT_PATH
+def weatherStatistics_output(filepath=os.path.join(cfg.PG_INPUT_PATH, "aux_data"), device="cpu"):
+    """ 
     :return:1, 5, 13, 1, 1
     """
     surface_mean = np.load(os.path.join(filepath, "surface_mean.npy")).astype(np.float32)
@@ -236,7 +236,7 @@ def weatherStatistics_output(filepath="/home/scc/om1434/pangu_zhaoshan2/data_sto
         device)
 
 
-def weatherStatistics_input(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
+def weatherStatistics_input(filepath=os.path.join(cfg.PG_INPUT_PATH, "aux_data"), device="cpu"):
     """
     :return:13, 1, 1, 5
     """
@@ -265,7 +265,7 @@ def LoadConstantMask(filepath='/home/code/Pangu-Weather/constant_masks', device=
         device)  # torch.Size([1, 1, 721, 1440])
 
 
-def LoadConstantMask3(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
+def LoadConstantMask3(filepath=os.path.join(cfg.PG_INPUT_PATH, "aux_data"), device="cpu"):
     mask = np.load(os.path.join(filepath, "constantMaks3.npy")).astype(np.float32)
     mask = torch.from_numpy(mask)
     return mask.to(device)
@@ -288,7 +288,7 @@ def computeStatistics(train_loader):
     return weather_surface_mean, weather_surface_std, weather_mean, weather_std
 
 
-def loadConstMask_h(filepath="/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu/aux_data", device="cpu"):
+def loadConstMask_h(filepath=os.path.join(cfg.PG_INPUT_PATH, "aux_data"), device="cpu"):
     mask_h = np.load(os.path.join(filepath, "Constant_17_output_0.npy")).astype(np.float32)
     mask_h = torch.from_numpy(mask_h)
     return mask_h.to(device)
