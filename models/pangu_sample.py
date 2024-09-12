@@ -1,4 +1,5 @@
 import sys
+import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from era5_data import utils, utils_data
 from era5_data.config import cfg
@@ -6,7 +7,7 @@ from torch import nn
 import torch
 import copy
 from era5_data import score
-import os
+
 
 def train(model, train_loader, val_loader, optimizer, lr_scheduler, res_path, device, writer, logger, start_epoch,
           rank=0):

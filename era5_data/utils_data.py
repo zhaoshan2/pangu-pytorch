@@ -4,8 +4,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
-print(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append(sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from era5_data.config import cfg
 
 from typing import Tuple, List
