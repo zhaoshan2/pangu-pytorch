@@ -1,12 +1,12 @@
 import sys
-sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from era5_data import utils, utils_data
 from era5_data.utils_dist import get_dist_info, init_dist
 from era5_data.config import cfg
 from models.pangu_model import PanguModel
 from torch import nn
 import torch
-import os
 from torch.utils import data
 from models.pangu_sample import test, train
 import argparse

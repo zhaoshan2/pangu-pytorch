@@ -1,6 +1,7 @@
 import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
 from era5_data import utils, utils_data
 from era5_data.utils_dist import get_dist_info, init_dist
 from era5_data.config import cfg

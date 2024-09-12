@@ -1,5 +1,6 @@
 import sys
-sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from era5_data import utils, utils_data
 from era5_data.config import cfg
 from models.pangu_model import PanguModel

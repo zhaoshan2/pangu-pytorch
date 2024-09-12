@@ -1,5 +1,6 @@
 import sys
-sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from torch import nn
 import torch
 from models.layers import *

@@ -330,7 +330,7 @@ def normBackData(upper, surface, statistics):
     return upper, surface
 
 if __name__ == "__main__":
-    # dataset_path ='/home/scc/om1434/pangu_zhaoshan2/data_storage_home/data/pangu'
+    # dataset_path = cfg.PG_INPUT_PATH
     # means, std = LoadStatic(os.path.join(dataset_path, 'aux_data'))
     # print(means.shape) #(1, 21, 1, 1)
     a, b, c, d = weatherStatistics_input()

@@ -3,15 +3,16 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import sys
+import os
 
-sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from era5_data.config import cfg
 from typing import Tuple, List
 import torch
 import random
 from torch.utils import data
 from torchvision import transforms as T
-import os
+
 import time
 from torch.nn.modules.module import _addindent
 import matplotlib.pyplot as plt

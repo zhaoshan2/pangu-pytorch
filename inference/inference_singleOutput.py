@@ -1,12 +1,12 @@
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import torch
 import numpy as np
 import onnx
 import onnxruntime as ort
 import pandas as pd
 from tqdm import tqdm
-import sys
-sys.path.append("/home/scc/om1434/pangu_zhaoshan2")
 from era5_data import utils, utils_data
 from era5_data import score
 from era5_data.config import cfg
