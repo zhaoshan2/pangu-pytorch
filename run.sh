@@ -16,4 +16,5 @@ source ./venv/bin/activate
 which python
 echo "start"
 python ./inference/test_main.py
+# python ./finetune/lora_tune.py
 echo "done"
