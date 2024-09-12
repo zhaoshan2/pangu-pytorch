@@ -33,19 +33,17 @@ The pretrined_model, aux_data, and sample surface/upper data is available in Hug
 The downloaded files shall be organized as the following hierarchy:
 ```plain
 Data -----------------------------------------------
-├── data_storage_home
-│   ├── data
-│   │   ├── pangu
-│   │   │   ├── pretrained_model
-│   │   │   ├── aux_data
-│   │   │   ├── surface
-│   │   │   │   ├── surface_201501.nc
-│   │   │   │   ├── surface_******.nc(YearMonth)
-│   │   │   │   ├── surface_201912.nc
-│   │   │   ├── upper
-│   │   │   │   ├── upper_20150101.nc
-│   │   │   │   ├── upper_********.nc (YearMonthDay)
-│   │   │   │   ├── upper_20191231.nc
+data
+├── pretrained_model
+├── aux_data
+├── surface
+│   ├── surface_201501.nc
+│   ├── surface_******.nc(YearMonth)
+│   ├── surface_201912.nc
+├── upper
+│   ├── upper_20150101.nc
+│   ├── upper_********.nc (YearMonthDay)
+│   ├── upper_20191231.nc
 Model ----------------------------------------------
 ├── pangu_torch
 │   ├── era5_data

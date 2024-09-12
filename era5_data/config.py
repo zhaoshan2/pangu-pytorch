@@ -22,7 +22,7 @@ __C.GLOBAL.NUM_STREADS = 16
 
 
 
-__C.PG_INPUT_PATH = os.path.join(__C.ROOT_DIR, 'data_storage_home/data/pangu')
+__C.PG_INPUT_PATH = os.path.join(__C.ROOT_DIR, 'data')
 assert __C.PG_INPUT_PATH is not None
 
 __C.PG_OUT_PATH = os.path.join(__C.GLOBAL.PATH,'result')
