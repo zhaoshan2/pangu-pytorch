@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     model = PanguModel(device=device).to(device)
 
-    checkpoint = torch.load(cfg.PG.BENCHMARK.PRETRAIN_24_torch)
+    checkpoint = torch.load(cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device)
     model.load_state_dict(checkpoint['model'])
 
     logger.info("Begin Test")
