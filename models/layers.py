@@ -115,9 +115,9 @@ class EarthSpecificLayer(nn.Module):
       i+=1
       if self.use_checkpoint:
         if i % 2 == 0:
-          x = checkpoint.checkpoint(blk, x, Z, H, W, False)
+          x = checkpoint.checkpoint(blk, x, Z, H, W, False, use_reentrant=True)
         else:
-          x = checkpoint.checkpoint(blk, x, Z, H, W, True)
+          x = checkpoint.checkpoint(blk, x, Z, H, W, True, use_reentrant=True)
       else:
           if i % 2 == 0:
             x = blk(x, Z, H, W, roll=False)
@@ -339,8 +339,8 @@ class EarthAttention3D(nn.Module):
     coords_w = coords_w.to(self.device)
 
     # Change the order of the index to calculate the index in total
-    coords_1 = torch.stack(torch.meshgrid([coords_zi, coords_hi, coords_w]))
-    coords_2 = torch.stack(torch.meshgrid([coords_zj, coords_hj, coords_w]))
+    coords_1 = torch.stack(torch.meshgrid(coords_zi, coords_hi, coords_w, indexing='ij'))
+    coords_2 = torch.stack(torch.meshgrid(coords_zj, coords_hj, coords_w, indexing='ij'))
     coords_flatten_1 = torch.flatten(coords_1, start_dim=1) 
     coords_flatten_2 = torch.flatten(coords_2, start_dim=1)
     coords = coords_flatten_1[:, :, None] - coords_flatten_2[:, None, :]

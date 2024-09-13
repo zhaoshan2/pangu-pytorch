@@ -62,7 +62,7 @@ class NetCDFDataset(data.Dataset):
                  validation=False,
                  startDate='20150101',
                  endDate='20150102',
-                 freq='H',
+                 freq='h',
                  horizon=5):
         """Initialize."""
         self.horizon = horizon
