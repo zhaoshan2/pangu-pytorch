@@ -5,23 +5,15 @@ from era5_data import utils, utils_data
 from era5_data.config import cfg
 from models.pangu_model import PanguModel
 import os
-import onnx
 import torch
-import onnx.numpy_helper as np_helper
 import os
-import pandas as pd
 from torch.utils import data
-from models.pangu_sample import test, train
-from pathlib import Path
+from models.pangu_sample import test
 import argparse
 import time
-import numpy as np
 import logging
-import copy
 import pandas as pd
-import datetime
 import torch
-from torch import nn
 if __name__ == "__main__":
     """
     check the re-implemented model performance
