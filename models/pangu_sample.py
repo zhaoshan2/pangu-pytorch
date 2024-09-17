@@ -7,6 +7,7 @@ from torch import nn
 import torch
 import copy
 from era5_data import score
+from datetime import datetime
 
 
 def train(model, train_loader, val_loader, optimizer, lr_scheduler, res_path, device, writer, logger, start_epoch,
@@ -191,7 +192,8 @@ def test(test_loader, model, device, res_path):
     batch_id = 0
     for id, data in enumerate(test_loader, 0):
         # Store initial input for different models
-        print(f"predict on {id}")
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[{timestamp}] predict on {id}")
         input_test, input_surface_test, target_test, target_surface_test, periods_test = data
         input_test, input_surface_test, target_test, target_surface_test = \
             input_test.to(device), input_surface_test.to(device), target_test.to(device), target_surface_test.to(device)
