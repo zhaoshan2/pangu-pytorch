@@ -214,43 +214,6 @@ class NetCDFDataset(data.Dataset):
         end_time = key + timedelta(hours=self.horizon)
         end_time_str = end_time.strftime("%Y%m%d%H")
 
-        print(
-            "Path: ",
-            os.path.join(
-                self.nc_path, "surface", "surface_{}.nc".format(start_time_str[0:6])
-            ),
-        )
-        print("Start time: ", start_time)
-
-        # Prepare the input_surface dataset
-        # print(start_time_str[0:6])
-        input_surface_dataset = xr.open_dataset(
-            os.path.join(
-                self.nc_path, "surface", "surface_{}.nc".format(start_time_str[0:6])
-            )
-        )  # 201501
-        if "expver" in input_surface_dataset.keys():
-            input_surface_dataset = input_surface_dataset.sel(time=start_time, expver=5)
-        else:
-            input_surface_dataset = input_surface_dataset.sel(time=start_time)
-
-        # Prepare the input_upper dataset
-        input_upper_dataset = xr.open_dataset(
-            os.path.join(
-                self.nc_path, "upper", "upper_{}.nc".format(start_time_str[0:8])
-            )
-        )
-        if "expver" in input_upper_dataset.keys():
-            input_upper_dataset = input_upper_dataset.sel(time=start_time, expver=5)
-        else:
-            input_upper_dataset = input_upper_dataset.sel(time=start_time)
-        # make sure upper and surface variables are at the same time
-        assert input_surface_dataset["time"] == input_upper_dataset["time"]
-        # input dataset to input numpy
-        input_old, input_surface_old = self.nctonumpy(
-            input_upper_dataset, input_surface_dataset
-        )
-
         # Get datasets
         input_surface_dataset = self.input_surface_dataset.sel(time=start_time)
         input_upper_dataset = self.input_upper_dataset.sel(time=start_time)
@@ -268,18 +231,6 @@ class NetCDFDataset(data.Dataset):
         target, target_surface = self.nctonumpy(
             target_upper_dataset, target_surface_dataset
         )
-
-        print("***********input")
-        print(input.shape)
-        print("***********input_old")
-        print(input_old.shape)
-
-        # Calculate the relative difference betwen input and input_old
-        relative_difference = np.abs(input - input_old) / np.abs(input_old)
-        print("Relative difference between input and input_old:", relative_difference)
-
-        assert np.allclose(input, input_old)
-        assert np.allclose(input_surface, input_surface_old)
 
         return (
             input,
