@@ -25,7 +25,7 @@ Finetune the model using parameter-efficient finetune (lora)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="loratuner_normout")
+    parser.add_argument("--type_net", type=str, default="loratuner_normout_64")
     parser.add_argument("--load_pretrained", type=bool, default=False)
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
@@ -40,6 +40,7 @@ if __name__ == "__main__":
         "gpu_ids": list(range(torch.cuda.device_count()))
     }  # Automatically select available GPUs
     gpu_list = ",".join(str(x) for x in opt["gpu_ids"])
+    print(f"Available GPUs: {gpu_list}")
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_list
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -156,7 +157,7 @@ if __name__ == "__main__":
             target_modules.append(n)
             print(f"appended {n}")
     config = LoraConfig(
-        r=16,
+        r=64,
         lora_alpha=16,
         target_modules=target_modules,
         lora_dropout=0.1,

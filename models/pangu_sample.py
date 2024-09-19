@@ -49,17 +49,22 @@ def train(
     # Train a single Pangu-Weather model
     for i in range(start_epoch, epochs + 1):
         epoch_loss = 0.0
+        print(f"Starting epoch {i}/{epochs}")
 
         for id, train_data in enumerate(train_loader):
             # Load weather data at time t as the input; load weather data at time t+336 as the output
             # Note the data need to be randomly shuffled
             input, input_surface, target, target_surface, periods = train_data
+            # TODO(EliasKng): Check if this is necessary/makes sense
+            input.requires_grad = True
+            input_surface.requires_grad = True
             input, input_surface, target, target_surface = (
                 input.to(device),
                 input_surface.to(device),
                 target.to(device),
                 target_surface.to(device),
             )
+            print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
 
             optimizer.zero_grad()
             # with torch.autocast(device_type='cuda', dtype=torch.float16):
@@ -101,6 +106,9 @@ def train(
             optimizer.step()
             epoch_loss += loss.item()
 
+        print(
+            f"Epoch {i} finished with training loss: {epoch_loss / len(train_loader):.4f}"
+        )
         epoch_loss /= len(train_loader)
         if rank == 0:
             logger.info("Epoch {} : {:.3f}".format(i, epoch_loss))
@@ -127,8 +135,14 @@ def train(
             )
             # torch.save(model, os.path.join(model_save_path,'train_{}.pth'.format(i)))
 
+            print("Model saved at epoch {}".format(i))
+            print(
+                "Save path: ", os.path.join(model_save_path, "train_{}.pth".format(i))
+            )
+
         # Begin to validate
         if i % cfg.PG.VAL.INTERVAL == 0:
+            print(f"Starting validation at epoch {i}")
             with torch.no_grad():
                 model.eval()
                 val_loss = 0.0
@@ -147,6 +161,8 @@ def train(
                         target_val.to(device),
                         target_surface_val.to(device),
                     )
+
+                    print(f"(V) Processing batch {id + 1}/{len(val_loader)}")
 
                     # Inference
                     output_val, output_surface_val = model(
@@ -176,6 +192,7 @@ def train(
                     val_loss += loss.item()
 
                 val_loss /= len(val_loader)
+                print(f"Validation loss at epoch {i}: {val_loss:.4f}")
                 writer.add_scalars("Loss", {"train": epoch_loss, "val": val_loss}, i)
                 logger.info("Validate at Epoch {} : {:.3f}".format(i, val_loss))
                 # Visualize the training process
@@ -219,11 +236,17 @@ def train(
                     torch.save(
                         best_model, os.path.join(model_save_path, "best_model.pth")
                     )
+                    print(
+                        f"New best model saved at epoch {i} with validation loss: {val_loss:.4f}"
+                    )
                     logger.info(f"current best model is saved at {i} epoch.")
                     epochs_since_last_improvement = 0
                 else:
                     epochs_since_last_improvement += 1
                     if epochs_since_last_improvement >= 5:
+                        print(
+                            f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
+                        )
                         logger.info(
                             f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
                         )
