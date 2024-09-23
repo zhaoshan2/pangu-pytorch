@@ -14,9 +14,12 @@ import argparse
 import time
 import logging
 import copy
+import warnings
 from tensorboardX import SummaryWriter
 from peft import LoraConfig, get_peft_model
 from torch.utils.data.distributed import DistributedSampler
+
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 """
 Finetune the model using parameter-efficient finetune (lora)
