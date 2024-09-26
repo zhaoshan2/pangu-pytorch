@@ -79,7 +79,7 @@ def train(
                 aux_constants["weather_statistics"],
                 aux_constants["constant_maps"],
                 aux_constants["const_h"],
-            )  # (1,5,13,721,1440)
+            )  # (1,5,13,721,1440) & (1, 4, 721, 1440)
 
             # Normalize gt to make loss compariable
             target, target_surface = utils_data.normData(
