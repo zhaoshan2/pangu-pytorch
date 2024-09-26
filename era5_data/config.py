@@ -23,6 +23,9 @@ assert __C.PG_INPUT_PATH is not None
 __C.PG_OUT_PATH = os.path.join(__C.GLOBAL.PATH, "result")
 assert __C.PG_OUT_PATH is not None
 
+# Land sea mask path
+__C.LSM = "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/lsm_global.zarr"
+
 __C.ERA5_UPPER_LEVELS = [
     "1000",
     "925",
@@ -51,7 +54,7 @@ __C.PG.TRAIN.EPOCHS = 100
 __C.PG.TRAIN.LR = 5e-6  # 5e-4
 __C.PG.TRAIN.WEIGHT_DECAY = 3e-6
 __C.PG.TRAIN.START_TIME = "20150101"
-__C.PG.TRAIN.END_TIME = "20150104"  # '20171231'
+__C.PG.TRAIN.END_TIME = "20150112"  # '20171231'
 __C.PG.TRAIN.FREQUENCY = "12h"
 __C.PG.TRAIN.BATCH_SIZE = 1
 __C.PG.TRAIN.UPPER_WEIGHTS = [3.00, 0.60, 1.50, 0.77, 0.54]
