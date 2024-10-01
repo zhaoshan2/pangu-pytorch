@@ -310,7 +310,7 @@ def test(test_loader, model, device, res_path):
         # Transfer to the output to the original data range
         output_test, output_surface_test = utils_data.normBackData(
             output_test, output_surface_test, aux_constants["weather_statistics_last"]
-        )
+        )  # [1, 5, 13, 721, 1440] and [1, 4, 721, 1440]
 
         target_time = periods_test[1][batch_id]
 
