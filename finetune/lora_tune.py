@@ -235,5 +235,3 @@ if __name__ == "__main__":
         device=device,
         res_path=output_path,
     )
-
-    # CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -m torch.distributed.launch --nproc_per_node=4 --master_port=1234 finetune_lastLayer_ddp.py --dist True
