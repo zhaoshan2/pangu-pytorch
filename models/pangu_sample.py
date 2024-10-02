@@ -192,11 +192,26 @@ def train(
                     )
 
                     val_loss_surface = criterion(output_surface_val, target_surface_val)
+                    val_loss_upper = criterion(output_val, target_val)
+
+                    if cfg.PG.VAL.USE_LSM:
+                        val_loss_surface_device = val_loss_surface.device
+                        val_loss_upper_device = val_loss_upper.device
+                        (
+                            lsm_expanded,
+                            lsm_surface_expanded,
+                        ) = utils_data.loadLandSeaMasks(
+                            val_loss_upper_device,
+                            val_loss_surface_device,
+                            mask_type="sea",
+                            fill_value=0,
+                        )
+                        val_loss_surface = val_loss_surface * lsm_surface_expanded
+                        val_loss_upper = val_loss_upper * lsm_expanded
+
                     weighted_val_loss_surface = torch.mean(
                         val_loss_surface * surface_weights
                     )
-
-                    val_loss_upper = criterion(output_val, target_val)
                     weighted_val_loss_upper = torch.mean(val_loss_upper * upper_weights)
 
                     loss = weighted_val_loss_upper + weighted_val_loss_surface * 0.25
