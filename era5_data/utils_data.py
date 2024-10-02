@@ -411,6 +411,56 @@ def loadAllConstants(device):
     return constants
 
 
+def loadLandSeaMasks(
+    device_upper: torch.device, device_surface: torch.device, mask_type: str = "sea"
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Load the land-sea mask (LSM) for Europe (as used in CDS data) and expand it to the required shape.
+
+    Parameters
+    ----------
+    device_upper : torch.device
+        The device to load the upper-level land-sea mask onto.
+    device_surface : torch.device
+        The device to load the surface-level land-sea mask onto.
+    mask_type : str, optional
+        The type of mask to return ('land' or 'sea'). Default is 'sea'.
+        If e.g., 'sea', then the mask will be 1 for sea (Europe) and  NaN for everything else (not europe, land).
+
+    Returns
+    -------
+    Tuple[torch.Tensor, torch.Tensor]
+        The expanded land-sea masks for upper and surface levels.
+    """
+    # Load the land-sea mask (LSM) from the dataset
+    lsm: xr.DataArray = xr.open_dataset(cfg.LSM_PATH, engine="zarr").lsm  # [721, 1440]
+    if mask_type == "land":
+        lsm = xr.where(lsm.isnull(), float("nan"), xr.where(lsm == 1, 1, float("nan")))
+    elif mask_type == "sea":
+        lsm = xr.where(lsm.isnull(), float("nan"), xr.where(lsm == 0, 1, float("nan")))
+    else:
+        raise ValueError("mask_type must be either 'land' or 'sea'")
+
+    # Convert the LSM to a NumPy array and flip it upside down (since xr exports it upside down)
+    lsm_np: np.ndarray = lsm.values
+    lsm_np = np.flipud(lsm_np)  # [721, 1440]
+
+    # Expand lsm_np to [1, 5, 13, 721, 1440] by copying the original array
+    lsm_expanded_np = np.expand_dims(lsm_np, axis=(0, 1, 2))  # [1, 1, 1, 721, 1440]
+    lsm_expanded_np = np.tile(
+        lsm_expanded_np, (1, 5, 13, 1, 1)
+    )  # [1, 5, 13, 721, 1440]
+    lsm_expanded = torch.tensor(lsm_expanded_np, device=device_upper)
+
+    # Expand lsm_np to [1, 4, 721, 1440] by copying the original array
+    lsm_surface_expanded_np = np.expand_dims(lsm_np, axis=(0, 1))  # [1, 1, 721, 1440]
+    lsm_surface_expanded_np = np.tile(
+        lsm_surface_expanded_np, (1, 4, 1, 1)
+    )  # [1, 4, 721, 1440]
+    lsm_surface_expanded = torch.tensor(lsm_surface_expanded_np, device=device_surface)
+
+    return lsm_expanded, lsm_surface_expanded
+
+
 def normData(upper, surface, statistics):
     surface_mean, surface_std, upper_mean, upper_std = (
         statistics[0],

@@ -22,7 +22,6 @@ if __name__ == "__main__":
     parser.add_argument("--type_net", type=str, default="reproduce_mask0")
     args = parser.parse_args()
     starts = time.time()
-    print("Hello")
 
     PATH = cfg.PG_INPUT_PATH
 
@@ -61,12 +60,14 @@ if __name__ == "__main__":
 
     model = PanguModel(device=device).to(device)
 
-    checkpoint = torch.load(cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device)
+    checkpoint = torch.load(
+        cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
+    )
     model.load_state_dict(checkpoint["model"])
 
     logger.info("Begin Test")
     msg = "\n"
-    msg += utils.torch_summarize(model, show_weights=False)
+    # msg += utils.torch_summarize(model, show_weights=False)
     logger.info(msg)
     output_path = os.path.join(output_path, "test")
     utils.mkdirs(output_path)
@@ -76,4 +77,5 @@ if __name__ == "__main__":
         model=model,
         device=model.device,
         res_path=output_path,
+        use_land_sea_mask=True,
     )

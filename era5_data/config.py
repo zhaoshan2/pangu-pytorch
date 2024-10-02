@@ -24,7 +24,9 @@ __C.PG_OUT_PATH = os.path.join(__C.GLOBAL.PATH, "result")
 assert __C.PG_OUT_PATH is not None
 
 # Land sea mask path
-__C.LSM = "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/lsm_global.zarr"
+__C.LSM_PATH = (
+    "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/lsm_global.zarr"
+)
 
 __C.ERA5_UPPER_LEVELS = [
     "1000",

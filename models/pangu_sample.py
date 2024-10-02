@@ -256,7 +256,7 @@ def train(
     return best_model
 
 
-def test(test_loader, model, device, res_path):
+def test(test_loader, model, device, res_path, use_land_sea_mask=False):
     # set up empty dics for rmses and anormaly correlation coefficients
     rmse_upper_z, rmse_upper_q, rmse_upper_t, rmse_upper_u, rmse_upper_v = (
         dict(),
@@ -312,6 +312,18 @@ def test(test_loader, model, device, res_path):
             output_test, output_surface_test, aux_constants["weather_statistics_last"]
         )  # [1, 5, 13, 721, 1440] and [1, 4, 721, 1440]
 
+        # Multiply w/ lsm
+        if use_land_sea_mask:
+            device_upper = output_test.device
+            device_surface = output_surface_test.device
+            lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasks(
+                device_upper, device_surface, mask_type="sea"
+            )
+
+            # Multiply output_test with the land-sea mask
+            output_test = output_test * lsm_expanded
+            output_surface_test = output_surface_test * lsm_surface_expanded
+
         target_time = periods_test[1][batch_id]
 
         # Visualize
@@ -332,7 +344,7 @@ def test(test_loader, model, device, res_path):
             output_surface_test.detach().cpu().squeeze(),
             target_surface_test.detach().cpu().squeeze(),
             input_surface_test.detach().cpu().squeeze(),
-            var="u10",
+            var="t2m",
             step=target_time,
             path=png_path,
         )
