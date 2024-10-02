@@ -89,9 +89,21 @@ def train(
             # We use the MAE loss to train the model
             # Different weight can be applied for different fields if needed
             loss_surface = criterion(output_surface, target_surface)
-            weighted_surface_loss = torch.mean(loss_surface * surface_weights)
-
             loss_upper = criterion(output, target)
+
+            if cfg.PG.TRAIN.USE_LSM:
+                loss_surface_device = loss_surface.device
+                loss_upper_device = loss_upper.device
+                lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasks(
+                    loss_upper_device,
+                    loss_surface_device,
+                    mask_type="sea",
+                    fill_value=0,
+                )
+                loss_surface = loss_surface * lsm_surface_expanded
+                loss_upper = loss_upper * lsm_expanded
+
+            weighted_surface_loss = torch.mean(loss_surface * surface_weights)
             weighted_upper_loss = torch.mean(loss_upper * upper_weights)
             # The weight of surface loss is 0.25
             loss = weighted_upper_loss + weighted_surface_loss * 0.25
@@ -256,7 +268,7 @@ def train(
     return best_model
 
 
-def test(test_loader, model, device, res_path, use_land_sea_mask=False):
+def test(test_loader, model, device, res_path):
     # set up empty dics for rmses and anormaly correlation coefficients
     rmse_upper_z, rmse_upper_q, rmse_upper_t, rmse_upper_u, rmse_upper_v = (
         dict(),
@@ -313,11 +325,11 @@ def test(test_loader, model, device, res_path, use_land_sea_mask=False):
         )  # [1, 5, 13, 721, 1440] and [1, 4, 721, 1440]
 
         # Multiply w/ lsm
-        if use_land_sea_mask:
+        if cfg.PG.TEST.USE_LSM:
             device_upper = output_test.device
             device_surface = output_surface_test.device
             lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasks(
-                device_upper, device_surface, mask_type="sea"
+                device_upper, device_surface, mask_type="sea", fill_value=float("nan")
             )
 
             # Multiply output_test with the land-sea mask

@@ -415,7 +415,7 @@ def loadLandSeaMasks(
     device_upper: torch.device,
     device_surface: torch.device,
     mask_type: str = "sea",
-    filler=float("nan"),
+    fill_value=float("nan"),
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Load the land-sea mask (LSM) for Europe (as used in CDS data) and expand it to the required shape.
 
@@ -428,7 +428,7 @@ def loadLandSeaMasks(
     mask_type : str, optional
         The type of mask to return ('land' or 'sea'). Default is 'sea'.
         If e.g., 'sea', then the mask will be 1 for sea (Europe) and  NaN for everything else (not europe, land).
-    filler : int, optional
+    fill_value : int, optional
         The value to fill the non 1s with. Default is NaN.
     Returns
     -------
@@ -438,9 +438,9 @@ def loadLandSeaMasks(
     # Load the land-sea mask (LSM) from the dataset
     lsm: xr.DataArray = xr.open_dataset(cfg.LSM_PATH, engine="zarr").lsm  # [721, 1440]
     if mask_type == "land":
-        lsm = xr.where(lsm.isnull(), float("nan"), xr.where(lsm == 1, 1, float("nan")))
+        lsm = xr.where(lsm.isnull(), fill_value, xr.where(lsm == 1, 1, fill_value))
     elif mask_type == "sea":
-        lsm = xr.where(lsm.isnull(), float("nan"), xr.where(lsm == 0, 1, float("nan")))
+        lsm = xr.where(lsm.isnull(), fill_value, xr.where(lsm == 0, 1, fill_value))
     else:
         raise ValueError("mask_type must be either 'land' or 'sea'")
 

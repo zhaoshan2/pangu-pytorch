@@ -77,5 +77,4 @@ if __name__ == "__main__":
         model=model,
         device=model.device,
         res_path=output_path,
-        use_land_sea_mask=True,
     )
