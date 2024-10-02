@@ -412,7 +412,10 @@ def loadAllConstants(device):
 
 
 def loadLandSeaMasks(
-    device_upper: torch.device, device_surface: torch.device, mask_type: str = "sea"
+    device_upper: torch.device,
+    device_surface: torch.device,
+    mask_type: str = "sea",
+    filler=float("nan"),
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Load the land-sea mask (LSM) for Europe (as used in CDS data) and expand it to the required shape.
 
@@ -425,7 +428,8 @@ def loadLandSeaMasks(
     mask_type : str, optional
         The type of mask to return ('land' or 'sea'). Default is 'sea'.
         If e.g., 'sea', then the mask will be 1 for sea (Europe) and  NaN for everything else (not europe, land).
-
+    filler : int, optional
+        The value to fill the non 1s with. Default is NaN.
     Returns
     -------
     Tuple[torch.Tensor, torch.Tensor]
