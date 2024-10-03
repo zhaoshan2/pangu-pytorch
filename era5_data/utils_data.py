@@ -411,7 +411,7 @@ def loadAllConstants(device):
     return constants
 
 
-def loadLandSeaMasks(
+def loadLandSeaMasksPangu(
     device_upper: torch.device,
     device_surface: torch.device,
     mask_type: str = "sea",
@@ -463,6 +463,29 @@ def loadLandSeaMasks(
     lsm_surface_expanded = torch.tensor(lsm_surface_expanded_np, device=device_surface)
 
     return lsm_expanded, lsm_surface_expanded
+
+
+def loadLandSeaMask(
+    device: torch.device,
+    mask_type: str = "sea",
+    fill_value=float("nan"),
+) -> torch.Tensor:
+    # Load the land-sea mask (LSM) from the dataset
+    lsm: xr.DataArray = xr.open_dataset(cfg.LSM_PATH, engine="zarr").lsm  # [721, 1440]
+    if mask_type == "land":
+        lsm = xr.where(lsm.isnull(), fill_value, xr.where(lsm == 1, 1, fill_value))
+    elif mask_type == "sea":
+        lsm = xr.where(lsm.isnull(), fill_value, xr.where(lsm == 0, 1, fill_value))
+    else:
+        raise ValueError("mask_type must be either 'land' or 'sea'")
+
+    # Convert the LSM to a NumPy array and flip it upside down (since xr exports it upside down)
+    lsm_np: np.ndarray = lsm.values
+    lsm_np = np.flipud(lsm_np).copy()  # [721, 1440]
+
+    lsm_expanded_np = np.expand_dims(lsm_np, axis=(0))  # [1, 721, 1440]
+
+    return torch.tensor(lsm_expanded_np, device=device)
 
 
 def normData(upper, surface, statistics):
