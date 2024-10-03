@@ -799,7 +799,7 @@ class PatchRecovery_power(nn.Module):
         )  # Flatten spatial dimensions [1, 384, 521280]
 
         # Apply the convolution to recover the final output shape [1, 721, 1440]
-        output = self.conv(output)[1, 2, 521280]
+        output = self.conv(output)  # [1, 2, 521280]
 
         # Reshape to the desired output shape
         output = output.view(
