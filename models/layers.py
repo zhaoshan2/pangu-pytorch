@@ -29,9 +29,9 @@ class PatchEmbedding_pretrain(nn.Module):
 
     def check_image_size_2d(self, x):
         _, _, h, w = x.size()
-        mod_pad_h = (self.window_size[1] - h % self.window_size[1]) % self.window_size[
-            1
-        ]  # 6
+        # mod_pad_h = (self.window_size[1] - h % self.window_size[1]) % self.window_size[
+        #     1
+        # ]  # 6
         mod_pad_w = (self.window_size[2] - w % self.window_size[2]) % self.window_size[
             2
         ]
@@ -41,15 +41,15 @@ class PatchEmbedding_pretrain(nn.Module):
 
     def check_image_size_3d(self, x):
         _, _, d, h, w = x.size()
-        mod_pad_d = (self.window_size[0] - h % self.window_size[0]) % self.window_size[
-            0
-        ]
-        mod_pad_h = (self.window_size[1] - h % self.window_size[1]) % self.window_size[
-            1
-        ]
-        mod_pad_w = (self.window_size[2] - w % self.window_size[2]) % self.window_size[
-            2
-        ]
+        # mod_pad_d = (self.window_size[0] - h % self.window_size[0]) % self.window_size[
+        #     0
+        # ]
+        # mod_pad_h = (self.window_size[1] - h % self.window_size[1]) % self.window_size[
+        #     1
+        # ]
+        # mod_pad_w = (self.window_size[2] - w % self.window_size[2]) % self.window_size[
+        #     2
+        # ]
         x = F.pad(x, (0, 0, 0, 3, 0, 1), "constant")
         # x = self.Pad3D(x)
         return x
@@ -770,3 +770,57 @@ class PatchRecovery_pretrain(nn.Module):
         output_surface = output_surface.view(output_surface.shape[0], 4, 721, 1440)
 
         return output, output_surface
+
+
+class PatchRecovery_power(nn.Module):
+    """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440])"""
+
+    def __init__(self, dim):
+        super().__init__()
+        """Patch recovery operation for wind power generation"""
+        # Use transposed convolution to recover data
+        self.patch_size = (2, 4, 4)
+        self.dim = dim
+
+        # A single conv layer to recover both atmospheric and surface data together
+        self.conv = nn.Conv1d(in_channels=dim, out_channels=2, kernel_size=1, stride=1)
+
+    def forward(self, x, Z, H, W):
+        print(f"Initial shape: {x.shape}")  # Debug: Initial shape
+        print(f"Z: {Z}, H: {H}, W: {W}")  # Debug: Z, H, W
+
+        # Reshape x back to three dimensions
+        x = torch.permute(x, (0, 2, 1))
+        print(f"Shape after permute: {x.shape}")  # Debug: Shape after permute
+
+        x = x.view(
+            x.shape[0], x.shape[1], Z, H, W
+        )  # Reshape to (batch, channels, Z, H, W)
+        print(f"Shape after view: {x.shape}")  # Debug: Shape after view
+
+        # Combine atmospheric and surface levels (if needed, you can just use all data together)
+        output = x.view(
+            x.shape[0], x.shape[1], -1
+        )  # Flatten spatial dimensions [1, 384, 521280]
+        print(
+            f"Shape after flattening: {output.shape}"
+        )  # Debug: Shape after flattening
+
+        # Apply the convolution to recover the final output shape [1, 721, 1440]
+        output = self.conv(output)
+        print(
+            f"Shape after convolution: {output.shape}"
+        )  # Debug: Shape after convolution
+
+        # Reshape to the desired output shape
+        output = output.view(output.shape[0], 1, 724, 1440)  # [batch, 1 variable, H, W]
+        print(
+            f"Shape after final view: {output.shape}"
+        )  # Debug: Shape after final view
+
+        # Crop the output to remove padding and fit the [1, 721, 1440] shape
+        height_slice = slice(0, output.shape[-2] - 3)  # Remove padding on height
+        output = output[:, :, height_slice, :]  # Final shape [batch, 1, 721, 1440]
+        print(f"Shape after cropping: {output.shape}")  # Debug: Shape after cropping
+
+        return output
