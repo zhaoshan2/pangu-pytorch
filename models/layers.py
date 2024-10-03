@@ -785,42 +785,31 @@ class PatchRecovery_power(nn.Module):
         # A single conv layer to recover both atmospheric and surface data together
         self.conv = nn.Conv1d(in_channels=dim, out_channels=2, kernel_size=1, stride=1)
 
-    def forward(self, x, Z, H, W):
-        print(f"Initial shape: {x.shape}")  # Debug: Initial shape
-        print(f"Z: {Z}, H: {H}, W: {W}")  # Debug: Z, H, W
-
+    def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
         # Reshape x back to three dimensions
-        x = torch.permute(x, (0, 2, 1))
-        print(f"Shape after permute: {x.shape}")  # Debug: Shape after permute
+        x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
 
         x = x.view(
             x.shape[0], x.shape[1], Z, H, W
-        )  # Reshape to (batch, channels, Z, H, W)
-        print(f"Shape after view: {x.shape}")  # Debug: Shape after view
+        )  # Reshape to (batch, channels, Z, H, W) [1, 384, 8, 181, 360]
 
         # Combine atmospheric and surface levels (if needed, you can just use all data together)
         output = x.view(
             x.shape[0], x.shape[1], -1
         )  # Flatten spatial dimensions [1, 384, 521280]
-        print(
-            f"Shape after flattening: {output.shape}"
-        )  # Debug: Shape after flattening
 
         # Apply the convolution to recover the final output shape [1, 721, 1440]
-        output = self.conv(output)
-        print(
-            f"Shape after convolution: {output.shape}"
-        )  # Debug: Shape after convolution
+        output = self.conv(output)[1, 2, 521280]
 
         # Reshape to the desired output shape
-        output = output.view(output.shape[0], 1, 724, 1440)  # [batch, 1 variable, H, W]
-        print(
-            f"Shape after final view: {output.shape}"
-        )  # Debug: Shape after final view
+        output = output.view(
+            output.shape[0], 1, 724, 1440
+        )  # [batch, 1 variable, H, W] [1, 1, 724, 1440]
 
         # Crop the output to remove padding and fit the [1, 721, 1440] shape
         height_slice = slice(0, output.shape[-2] - 3)  # Remove padding on height
-        output = output[:, :, height_slice, :]  # Final shape [batch, 1, 721, 1440]
-        print(f"Shape after cropping: {output.shape}")  # Debug: Shape after cropping
+        output = output[
+            :, :, height_slice, :
+        ]  # Final shape [batch, 1, 721, 1440] [1, 1, 721, 1440]
 
         return output
