@@ -23,6 +23,8 @@ assert __C.PG_INPUT_PATH is not None
 __C.PG_OUT_PATH = os.path.join(__C.GLOBAL.PATH, "result")
 assert __C.PG_OUT_PATH is not None
 
+
+__C.ERA5_PATH = "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr"
 # Land sea mask path
 __C.LSM_PATH = (
     "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/lsm_global.zarr"

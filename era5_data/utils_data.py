@@ -165,10 +165,7 @@ class NetCDFDataset(data.Dataset):
         return upper, surface
 
     def _get_zarr_data(self) -> Tuple[xr.Dataset, xr.Dataset]:
-        zarr_data = xr.open_dataset(
-            "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
-            engine="zarr",
-        )
+        zarr_data = xr.open_dataset(cfg.ERA5_PATH, engine="zarr")
         variable_mapping = {
             "geopotential": "z",
             "specific_humidity": "q",
