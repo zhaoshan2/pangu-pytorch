@@ -93,6 +93,7 @@ def train(
 
             # Call the backward algorithm and calculate the gratitude of parameters
             # scaler.scale(loss).backward()
+            loss = torch.mean(loss)
             loss.backward()
 
             # Update model parameters with Adam optimizer
