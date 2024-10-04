@@ -82,7 +82,7 @@ def train(
             if cfg.PG.TRAIN.USE_LSM:
                 device_upper = output.device
                 lsm_expanded = utils_data.loadLandSeaMask(
-                    device_upper, mask_type="sea", fill_value=float("nan")
+                    device_upper, mask_type="sea", fill_value=0
                 )
 
                 # Multiply output_test with the land-sea mask
@@ -148,59 +148,36 @@ def train(
                         input_val,
                         input_surface_val,
                         target_val,
-                        target_surface_val,
                         periods_val,
                     ) = val_data
-                    input_val_raw, input_surface_val_raw = input_val, input_surface_val
-                    input_val, input_surface_val, target_val, target_surface_val = (
+                    input_val, input_surface_val, target_val = (
                         input_val.to(device),
                         input_surface_val.to(device),
                         target_val.to(device),
-                        target_surface_val.to(device),
                     )
 
                     print(f"(V) Processing batch {id + 1}/{len(val_loader)}")
 
                     # Inference
-                    output_val, output_surface_val = model(
+                    output_val = model(
                         input_val,
                         input_surface_val,
                         aux_constants["weather_statistics"],
                         aux_constants["constant_maps"],
                         aux_constants["const_h"],
                     )
-                    # Noralize the gt to make the loss compariable
-                    target_val, target_surface_val = utils_data.normData(
-                        target_val,
-                        target_surface_val,
-                        aux_constants["weather_statistics_last"],
-                    )
 
-                    val_loss_surface = criterion(output_surface_val, target_surface_val)
-                    val_loss_upper = criterion(output_val, target_val)
-
-                    if cfg.PG.VAL.USE_LSM:
-                        val_loss_surface_device = val_loss_surface.device
-                        val_loss_upper_device = val_loss_upper.device
-                        (
-                            lsm_expanded,
-                            lsm_surface_expanded,
-                        ) = utils_data.loadLandSeaMasksPangu(
-                            val_loss_upper_device,
-                            val_loss_surface_device,
-                            mask_type="sea",
-                            fill_value=0,
+                    if cfg.PG.TRAIN.USE_LSM:
+                        device_val = output_val.device
+                        lsm_expanded = utils_data.loadLandSeaMask(
+                            device_val, mask_type="sea", fill_value=0
                         )
-                        val_loss_surface = val_loss_surface * lsm_surface_expanded
-                        val_loss_upper = val_loss_upper * lsm_expanded
 
-                    weighted_val_loss_surface = torch.mean(
-                        val_loss_surface * surface_weights
-                    )
-                    weighted_val_loss_upper = torch.mean(val_loss_upper * upper_weights)
+                        # Multiply output_test with the land-sea mask
+                        output_val = output_val * lsm_expanded
 
-                    loss = weighted_val_loss_upper + weighted_val_loss_surface * 0.25
-
+                    loss = criterion(output_val, target_val)
+                    loss = torch.mean(loss)
                     val_loss += loss.item()
 
                 val_loss /= len(val_loader)
@@ -210,36 +187,25 @@ def train(
                 # Visualize the training process
                 png_path = os.path.join(res_path, "png_training")
                 utils.mkdirs(png_path)
-                # """
-                # Normalize the data back to the original space for visualization
-                output_val, output_surface_val = utils_data.normBackData(
-                    output_val,
-                    output_surface_val,
-                    aux_constants["weather_statistics_last"],
-                )
-                target_val, target_surface_val = utils_data.normBackData(
-                    target_val,
-                    target_surface_val,
-                    aux_constants["weather_statistics_last"],
-                )
 
-                utils.visuailze(
-                    output_val.detach().cpu().squeeze(),
-                    target_val.detach().cpu().squeeze(),
-                    input_val_raw.squeeze(),
-                    var="u",
-                    z=12,
-                    step=i,
-                    path=png_path,
-                )
-                utils.visuailze_surface(
-                    output_surface_val.detach().cpu().squeeze(),
-                    target_surface_val.detach().cpu().squeeze(),
-                    input_surface_val_raw.squeeze(),
-                    var="msl",
-                    step=i,
-                    path=png_path,
-                )
+                # utils.visuailze(
+                #     output_val.detach().cpu().squeeze(),
+                #     target_val.detach().cpu().squeeze(),
+                #     input_val_raw.squeeze(),
+                #     var="u",
+                #     z=12,
+                #     step=i,
+                #     path=png_path,
+                # )
+                # utils.visuailze_surface(
+                #     output_surface_val.detach().cpu().squeeze(),
+                #     target_surface_val.detach().cpu().squeeze(),
+                #     input_surface_val_raw.squeeze(),
+                #     var="msl",
+                #     step=i,
+                #     path=png_path,
+                # )
+
                 # Early stopping
                 if val_loss < best_loss:
                     best_loss = val_loss
