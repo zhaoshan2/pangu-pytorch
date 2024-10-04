@@ -53,15 +53,14 @@ def train(
         for id, train_data in enumerate(train_loader):
             # Load weather data at time t as the input; load weather data at time t+336 as the output
             # Note the data need to be randomly shuffled
-            input, input_surface, target, target_surface, periods = train_data
+            input, input_surface, target, periods = train_data
             # TODO(EliasKng): Check if this is necessary/makes sense
             input.requires_grad = True
             input_surface.requires_grad = True
-            input, input_surface, target, target_surface = (
+            input, input_surface, target = (
                 input.to(device),
                 input_surface.to(device),
                 target.to(device),
-                target_surface.to(device),
             )
             print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
 
@@ -72,7 +71,7 @@ def train(
 
             # Note the input and target need to be normalized (done within the function)
             # Call the model and get the output
-            output, output_surface = model(
+            output = model(
                 input,
                 input_surface,
                 aux_constants["weather_statistics"],
@@ -80,32 +79,17 @@ def train(
                 aux_constants["const_h"],
             )  # (1,5,13,721,1440) & (1, 4, 721, 1440)
 
-            # Normalize gt to make loss compariable
-            target, target_surface = utils_data.normData(
-                target, target_surface, aux_constants["weather_statistics_last"]
-            )
+            if cfg.PG.TRAIN.USE_LSM:
+                device_upper = output.device
+                lsm_expanded = utils_data.loadLandSeaMask(
+                    device_upper, mask_type="sea", fill_value=float("nan")
+                )
+
+                # Multiply output_test with the land-sea mask
+                output = output * lsm_expanded
 
             # We use the MAE loss to train the model
-            # Different weight can be applied for different fields if needed
-            loss_surface = criterion(output_surface, target_surface)
-            loss_upper = criterion(output, target)
-
-            if cfg.PG.TRAIN.USE_LSM:
-                loss_surface_device = loss_surface.device
-                loss_upper_device = loss_upper.device
-                lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasksPangu(
-                    loss_upper_device,
-                    loss_surface_device,
-                    mask_type="sea",
-                    fill_value=0,
-                )
-                loss_surface = loss_surface * lsm_surface_expanded
-                loss_upper = loss_upper * lsm_expanded
-
-            weighted_surface_loss = torch.mean(loss_surface * surface_weights)
-            weighted_upper_loss = torch.mean(loss_upper * upper_weights)
-            # The weight of surface loss is 0.25
-            loss = weighted_upper_loss + weighted_surface_loss * 0.25
+            loss = criterion(output, target)
 
             # Call the backward algorithm and calculate the gratitude of parameters
             # scaler.scale(loss).backward()
@@ -151,6 +135,7 @@ def train(
                 "Save path: ", os.path.join(model_save_path, "train_{}.pth".format(i))
             )
 
+        # TODO(EliasKng): Adapt validation code
         # Begin to validate
         if i % cfg.PG.VAL.INTERVAL == 0:
             print(f"Starting validation at epoch {i}")
