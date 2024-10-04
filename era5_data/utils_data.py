@@ -120,7 +120,8 @@ class NetCDFDataset(data.Dataset):
 
         random.seed(seed)
 
-    def nctonumpy(self, dataset_upper, dataset_surface):
+    @staticmethod
+    def nctonumpy(dataset_upper, dataset_surface):
         """
         Input
             xr.Dataset upper, surface
@@ -164,7 +165,8 @@ class NetCDFDataset(data.Dataset):
 
         return upper, surface
 
-    def _get_zarr_data(self) -> Tuple[xr.Dataset, xr.Dataset]:
+    @staticmethod
+    def _get_zarr_data() -> Tuple[xr.Dataset, xr.Dataset]:
         zarr_data = xr.open_dataset(cfg.ERA5_PATH, engine="zarr")
         variable_mapping = {
             "geopotential": "z",
