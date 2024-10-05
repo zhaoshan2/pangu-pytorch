@@ -61,7 +61,7 @@ if __name__ == "__main__":
         filepath_era5="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
         filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
         startDate="20170101",
-        endDate="20170201",
+        endDate="20171231",
         freq="24h",
     )
 
@@ -80,8 +80,8 @@ if __name__ == "__main__":
     val_dataset = energy_dataset.EnergyDataset(
         filepath_era5="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
         filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
-        startDate="20170202",
-        endDate="20170205",
+        startDate="20180101",
+        endDate="20180228",
         freq="24h",
     )
 
@@ -97,8 +97,8 @@ if __name__ == "__main__":
     test_dataset = energy_dataset.EnergyDataset(
         filepath_era5="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
         filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
-        startDate="20170302",
-        endDate="20170305",
+        startDate="20180301",
+        endDate="20180430",
         freq="24h",
     )
 
