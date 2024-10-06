@@ -1,5 +1,7 @@
 import sys
 import os
+from typing import List, Tuple, Optional
+from torch import Tensor
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import torch
@@ -10,12 +12,12 @@ from models.pangu_model import PanguModel
 class PanguPower(PanguModel):
     def __init__(
         self,
-        depths=[2, 6, 6, 2],
-        num_heads=[6, 12, 12, 6],
-        dims=[192, 384, 384, 192],
-        patch_size=(2, 4, 4),
-        device=None,
-    ):
+        depths: List[int] = [2, 6, 6, 2],
+        num_heads: List[int] = [6, 12, 12, 6],
+        dims: List[int] = [192, 384, 384, 192],
+        patch_size: Tuple[int, int, int] = (2, 4, 4),
+        device: Optional[torch.device] = None,
+    ) -> None:
         super(PanguPower, self).__init__(
             depths=depths,
             num_heads=num_heads,
@@ -27,7 +29,14 @@ class PanguPower(PanguModel):
         # Replace the output layer with PatchRecovery_transfer
         self._output_layer = PatchRecovery_power(dims[-2])  # dims[-2] = 384
 
-    def forward(self, input, input_surface, statistics, maps, const_h):
+    def forward(
+        self,
+        input: Tensor,
+        input_surface: Tensor,
+        statistics: Tensor,
+        maps: Tensor,
+        const_h: Tensor,
+    ) -> Tensor:
         """Backbone architecture"""
         # Embed the input fields into patches
         # input:(B, N, Z, H, W) ([1, 5, 13, 721, 1440])input_surface(B,N,H,W)([1, 4, 721, 1440])
