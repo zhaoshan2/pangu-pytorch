@@ -2,7 +2,9 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from era5_data import utils, utils_data
+sys.path.append("/hkfs/home/project/hk-project-test-mlperf/om1434/masterarbeit")
+from wind_fusion import energy_dataset
+from era5_data import utils
 from era5_data.config import cfg
 from models.pangu_power import PanguPower
 import os
@@ -16,10 +18,10 @@ import logging
 
 if __name__ == "__main__":
     """
-    check the re-implemented model performance
+    check pg-power model performance
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="reproduce_mask0")
+    parser.add_argument("--type_net", type=str, default="test_pg_power_random")
     args = parser.parse_args()
     starts = time.time()
 
@@ -36,15 +38,12 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(logger_name)
 
-    test_dataset = utils_data.NetCDFDataset(
-        nc_path=PATH,
-        data_transform=None,
-        training=False,
-        validation=False,
-        startDate=cfg.PG.TEST.START_TIME,
-        endDate=cfg.PG.TEST.END_TIME,
-        freq=cfg.PG.TEST.FREQUENCY,
-        horizon=cfg.PG.HORIZON,
+    test_dataset = energy_dataset.EnergyDataset(
+        filepath_era5="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
+        filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
+        startDate="20180301",
+        endDate="20180430",
+        freq="24h",
     )
 
     test_dataloader = data.DataLoader(
@@ -61,22 +60,30 @@ if __name__ == "__main__":
     model = PanguPower(device=device).to(device)
 
     checkpoint = torch.load(
-        cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
+        "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/finetune_power_output_upsample/24/models/train_7.pth",
+        map_location=device,
+        weights_only=False,
     )
+    model.load_state_dict(checkpoint["model"])
 
-    pretrained_dict = checkpoint["model"]
-    model_dict = model.state_dict()
+    # # Load pretrained weights and replace last Layer(s)
+    # checkpoint = torch.load(
+    #     cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
+    # )
 
-    # Filter out keys in pretrained_dict that belong to _output_layer (conv and conv_surface)
-    pretrained_dict = {
-        k: v for k, v in pretrained_dict.items() if "_output_layer" not in k
-    }
+    # pretrained_dict = checkpoint["model"]
+    # model_dict = model.state_dict()
 
-    # Update the model's state_dict except the _output_layer
-    model_dict.update(pretrained_dict)
+    # # Filter out keys in pretrained_dict that belong to _output_layer (conv and conv_surface)
+    # pretrained_dict = {
+    #     k: v for k, v in pretrained_dict.items() if "_output_layer" not in k
+    # }
 
-    # Load the updated state_dict into the model
-    model.load_state_dict(model_dict)
+    # # Update the model's state_dict except the _output_layer
+    # model_dict.update(pretrained_dict)
+
+    # # Load the updated state_dict into the model
+    # model.load_state_dict(model_dict)
 
     logger.info("Begin Test")
     msg = "\n"
