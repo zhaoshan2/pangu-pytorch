@@ -725,16 +725,15 @@ class PatchRecovery_pretrain(nn.Module):
             in_channels=dim, out_channels=64, kernel_size=1, stride=1
         )
 
-    def forward(self, x, Z, H, W):
+    def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
         # The inverse operation of the patch embedding operation, patch_size = (2, 4, 4) as in the original paper
         # Reshape x back to three dimensions
-        x = torch.permute(x, (0, 2, 1))
-        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # (1,384,8,181,360)
-
+        x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
+        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # [1, 384, 8, 181, 360]
         # Call the transposed convolution
-        output = x[:, :, 1:, :, :]
-        output = output.view(output.shape[0], output.shape[1], -1)  # 456120
-        output = self.conv(output)
+        output = x[:, :, 1:, :, :]  # [1, 384, 7, 181, 360]
+        output = output.view(output.shape[0], output.shape[1], -1)  # [1, 384, 456120]
+        output = self.conv(output)  # [1, 160, 456120]
         # patch_size
         output = output.reshape(
             output.shape[0],
@@ -745,30 +744,45 @@ class PatchRecovery_pretrain(nn.Module):
             Z - 1,
             H,
             W,
-        )  # [1, 5, 2, 4, 4, 7, 181, 360
-        output = torch.permute(output, (0, 1, 5, 2, 6, 3, 7, 4))
-        output = output.reshape(output.shape[0], 5, 14, 724, 1440)
+        )  # [1, 5, 2, 4, 4, 7, 181, 360]
+        output = torch.permute(
+            output, (0, 1, 5, 2, 6, 3, 7, 4)
+        )  # [1, 5, 7, 2, 181, 4, 360, 4]
+        output = output.reshape(
+            output.shape[0], 5, 14, 724, 1440
+        )  # [1, 5, 14, 724, 1440]
         # Crop the output to remove zero-paddings
         depth_slice = slice(0, output.shape[-3] - 1)
         height_slice = slice(0, output.shape[-2] - 3)
-        output = output[:, :, depth_slice, height_slice, :]
-        output = output.view(output.shape[0], 5, 1, 13, 721, 1440)
+        output = output[:, :, depth_slice, height_slice, :]  # [1, 5, 13, 721, 1440]
+        output = output.view(
+            output.shape[0], 5, 1, 13, 721, 1440
+        )  # [1, 5, 1, 13, 721, 1440]
         # output = output * self.upper_std + self.upper_mean
-        output = output.view(output.shape[0], 5, 13, 721, 1440)
+        output = output.view(output.shape[0], 5, 13, 721, 1440)  # [1, 5, 13, 721, 1440]
 
-        output_surface = x[:, :, 0, :, :]
-        output_surface = output_surface.view(output_surface.shape[0], self.dim, -1)
-        output_surface = self.conv_surface(output_surface)
+        output_surface = x[:, :, 0, :, :]  # [1, 384, 181, 360]
+        output_surface = output_surface.view(
+            output_surface.shape[0], self.dim, -1
+        )  # [1, 384, 65160]
+        output_surface = self.conv_surface(output_surface)  # [1, 64, 65160]
         output_surface = output_surface.view(
             output_surface.shape[0], 4, self.patch_size[1], self.patch_size[2], H, W
-        )
-        output_surface = torch.permute(output_surface, (0, 1, 4, 2, 5, 3))
-        output_surface = output_surface.reshape(output_surface.shape[0], 4, 724, 1440)
-        output_surface = output_surface[:, :, height_slice, :]
-        output_surface = output_surface.view(output_surface.shape[0], 4, 1, 721, 1440)
+        )  # [1, 4, 4, 4, 181, 360]
+        output_surface = torch.permute(
+            output_surface, (0, 1, 4, 2, 5, 3)
+        )  # [1, 4, 181, 4, 360, 4]
+        output_surface = output_surface.reshape(
+            output_surface.shape[0], 4, 724, 1440
+        )  # [1, 4, 724, 1440]
+        output_surface = output_surface[:, :, height_slice, :]  # [1, 4, 721, 1440]
+        output_surface = output_surface.view(
+            output_surface.shape[0], 4, 1, 721, 1440
+        )  # [1, 4, 1, 721, 1440]
         # output_surface = output_surface * self.surface_std + self.surface_mean
-        output_surface = output_surface.view(output_surface.shape[0], 4, 721, 1440)
-
+        output_surface = output_surface.view(
+            output_surface.shape[0], 4, 721, 1440
+        )  # [1, 4, 721, 1440]
         return output, output_surface
 
 
@@ -793,7 +807,7 @@ class PatchRecovery_power(nn.Module):
             x.shape[0], x.shape[1], Z, H, W
         )  # Reshape to (batch, channels, Z, H, W) [1, 384, 8, 181, 360]
 
-        # Combine atmospheric and surface levels (if needed, you can just use all data together)
+        # Use both atmospheric and surface levels
         output = x.view(
             x.shape[0], x.shape[1], -1
         )  # Flatten spatial dimensions [1, 384, 521280]
