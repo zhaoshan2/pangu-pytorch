@@ -97,9 +97,6 @@ def train(
             mask = ~torch.isnan(output)
             loss = criterion(output[mask], target[mask])  # [1, 1, 721, 1440]
 
-            # Truncate loss to EU area
-            # loss = loss[:, :, 721 - 651 : 721 - 466, :183]
-
             # Call the backward algorithm and calculate the gratitude of parameters
             # scaler.scale(loss).backward()
             loss = torch.mean(loss)
