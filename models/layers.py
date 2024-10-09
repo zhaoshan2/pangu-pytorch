@@ -846,7 +846,10 @@ class PatchRecovery_power(nn.Module):
 
 
 class PatchRecovery_power_surface(nn.Module):
-    """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440])"""
+    """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440]).
+    Processing both surface and atmospheric in one step (with one convolution) is not done, since for atmospheric variables
+    the data has 5 vars on 13 pressure levels, for surface, there are 4 vars on 1 level (ground).
+    """
 
     def __init__(self, dim):
         super().__init__()
