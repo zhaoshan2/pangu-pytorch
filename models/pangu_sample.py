@@ -55,9 +55,6 @@ def train(
             # Load weather data at time t as the input; load weather data at time t+336 as the output
             # Note the data need to be randomly shuffled
             input, input_surface, target, target_surface, periods = train_data
-            # TODO(EliasKng): Check if this is necessary/makes sense
-            input.requires_grad = True
-            input_surface.requires_grad = True
             input, input_surface, target, target_surface = (
                 input.to(device),
                 input_surface.to(device),
