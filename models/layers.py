@@ -717,7 +717,8 @@ class PatchRecovery_pretrain(nn.Module):
         """Patch recovery operation"""
         # Hear we use two transposed convolutions to recover data
         self.patch_size = (2, 4, 4)
-        self.dim = dim
+        self.dim = dim  # 384
+        # Bekomme 384 Enigabebilder, Projiziere runter auf 160 Aufgabebilder
         self.conv = nn.Conv1d(
             in_channels=dim, out_channels=160, kernel_size=1, stride=1
         )
@@ -750,7 +751,7 @@ class PatchRecovery_pretrain(nn.Module):
         )  # [1, 5, 7, 2, 181, 4, 360, 4]
         output = output.reshape(
             output.shape[0], 5, 14, 724, 1440
-        )  # [1, 5, 14, 724, 1440]
+        )  # [1, 5, 14, 724, 1440] (zusammenfassen von 7 & 2)
         # Crop the output to remove zero-paddings
         depth_slice = slice(0, output.shape[-3] - 1)
         height_slice = slice(0, output.shape[-2] - 3)
@@ -797,7 +798,7 @@ class PatchRecovery_power(nn.Module):
         self.dim = dim
 
         # A single conv layer to recover both atmospheric and surface data together
-        self.conv = nn.Conv1d(in_channels=dim, out_channels=2, kernel_size=1, stride=1)
+        self.conv = nn.Conv1d(in_channels=dim, out_channels=4, kernel_size=1, stride=1)
 
     def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
         # Reshape x back to three dimensions
@@ -815,6 +816,21 @@ class PatchRecovery_power(nn.Module):
         # Apply the convolution to recover the final output shape [1, 721, 1440]
         output = self.conv(output)  # [1, 2, 521280]
 
+        output = output.reshape(
+            output.shape[0],
+            1,
+            self.patch_size[0],
+            self.patch_size[1],
+            self.patch_size[2],
+            Z - 1,
+            H,
+            W,
+        )
+
+        print(output.shape)
+
+        # TODO(EliasKng): Reshape & Permute Line 739 & co.
+
         # Reshape to the desired output shape
         output = output.view(
             output.shape[0], 1, 724, 1440
@@ -827,3 +843,51 @@ class PatchRecovery_power(nn.Module):
         ]  # Final shape [batch, 1, 721, 1440] [1, 1, 721, 1440]
 
         return output
+
+
+class PatchRecovery_power_surface(nn.Module):
+    """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440])"""
+
+    def __init__(self, dim):
+        super().__init__()
+        """Patch recovery operation"""
+        # Hear we use two transposed convolutions to recover data
+        self.patch_size = (2, 4, 4)
+        self.dim = dim  # 384
+        # Bekomme 384 Enigabebilder, Projiziere runter auf 160 Aufgabebilder
+        self.conv = nn.Conv1d(
+            in_channels=dim, out_channels=160, kernel_size=1, stride=1
+        )
+        self.conv_surface = nn.Conv1d(
+            in_channels=dim, out_channels=16, kernel_size=1, stride=1
+        )
+
+    def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
+        # TODO(EliasKng): Simplify, output is not needed except for height_slice
+
+        # The inverse operation of the patch embedding operation, patch_size = (2, 4, 4) as in the original paper
+        # Reshape x back to three dimensions
+        x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
+        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # [1, 384, 8, 181, 360]
+
+        output = x[:, :, 0, :, :]  # [1, 384, 181, 360]
+        output = output.view(output.shape[0], self.dim, -1)  # [1, 384, 65160]
+        output = self.conv_surface(output)  # [1, 16, 65160]
+        output = output.view(
+            output.shape[0], 1, self.patch_size[1], self.patch_size[2], H, W
+        )  # [1, 1, 4, 4, 181, 360]
+        output = torch.permute(output, (0, 1, 4, 2, 5, 3))  # [1, 1, 181, 4, 360, 4]
+        output = output.reshape(output.shape[0], 1, 724, 1440)  # [1, 1, 724, 1440]
+        height_slice = slice(0, 724 - 3)
+        output = output[:, :, height_slice, :]  # [1, 1, 721, 1440]
+        output = output.view(output.shape[0], 1, 1, 721, 1440)  # [1, 1, 1, 721, 1440]
+        # output_surface = output_surface * self.surface_std + self.surface_mean
+        output = output.view(output.shape[0], 1, 721, 1440)  # [1, 1, 721, 1440]
+        return output
+
+
+if __name__ == "__main__":
+    pr = PatchRecovery_power_surface(384)
+    Z, H, W = 8, 181, 360
+    output = pr.forward(torch.randn(1, 521280, 384), Z, H, W)
+    print(output.shape)
