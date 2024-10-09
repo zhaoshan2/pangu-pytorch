@@ -21,7 +21,9 @@ if __name__ == "__main__":
     check pg-power model performance
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="finetune_power_0610-2_output")
+    parser.add_argument(
+        "--type_net", type=str, default="finetune_power_0910_output_mask"
+    )
     args = parser.parse_args()
     starts = time.time()
 
@@ -60,10 +62,12 @@ if __name__ == "__main__":
     model = PanguPower(device=device).to(device)
 
     checkpoint = torch.load(
-        "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/finetune_power_0610-2_output/24/models/train_17.pth",
+        "wind_fusion/pangu_pytorch/result/finetune_power_0910-2_output_trunc/24/models/train_7.pth",
         map_location=device,
         weights_only=False,
     )
+    for key, value in checkpoint["model"].items():
+        print(f"{key}: {value.size()}")
     model.load_state_dict(checkpoint["model"])
 
     # # Load pretrained weights and replace last Layer(s)

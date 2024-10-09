@@ -24,7 +24,7 @@ Finetune pangu_power on the energy dataset
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--type_net", type=str, default="finetune_power_0910-2_output_trunc"
+        "--type_net", type=str, default="finetune_power_0910_output_mask"
     )
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
