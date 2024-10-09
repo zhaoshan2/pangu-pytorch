@@ -95,7 +95,7 @@ def train(
             # We use the MAE loss to train the model
             loss = criterion(output, target)  # [1, 1, 721, 1440]
 
-            # Truncate loss
+            # Truncate loss to EU area
             loss = loss[:, :, 721 - 651 : 721 - 466, :183]
 
             # Call the backward algorithm and calculate the gratitude of parameters
@@ -184,6 +184,9 @@ def train(
                         output_val = output_val * lsm_expanded
 
                     loss = criterion(output_val, target_val)
+
+                    # Truncate loss to EU area
+                    loss = loss[:, :, 721 - 651 : 721 - 466, :183]
                     loss = torch.mean(loss)
                     val_loss += loss.item()
 
