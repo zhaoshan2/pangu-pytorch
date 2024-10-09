@@ -8,6 +8,7 @@ from wind_fusion import energy_dataset
 from era5_data import utils
 from era5_data.config import cfg
 import torch
+from torch.optim.adam import Adam
 import os
 from torch.utils import data
 from models.pangu_power_sample import test, train
@@ -22,7 +23,9 @@ Finetune pangu_power on the energy dataset
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="finetune_power_0610-2_output")
+    parser.add_argument(
+        "--type_net", type=str, default="finetune_power_0910-2_output_trunc"
+    )
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
@@ -141,7 +144,7 @@ if __name__ == "__main__":
             param.requires_grad = True
             print("Requires grad: ", name)
 
-    optimizer = torch.optim.Adam(
+    optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=cfg.PG.TRAIN.LR,
         weight_decay=cfg.PG.TRAIN.WEIGHT_DECAY,
