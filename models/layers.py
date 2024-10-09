@@ -854,33 +854,33 @@ class PatchRecovery_power_surface(nn.Module):
     def __init__(self, dim):
         super().__init__()
         """Patch recovery operation"""
-        # Hear we use two transposed convolutions to recover data
         self.patch_size = (2, 4, 4)
         self.dim = dim  # 384
-        # Bekomme 384 Enigabebilder, Projiziere runter auf 160 Aufgabebilder
-        self.conv = nn.Conv1d(
-            in_channels=dim, out_channels=160, kernel_size=1, stride=1
-        )
-        self.conv_surface = nn.Conv1d(
-            in_channels=dim, out_channels=16, kernel_size=1, stride=1
-        )
+        # Receive 384 Input images, project down to 16 output images
+        self.conv = nn.Conv1d(in_channels=dim, out_channels=16, kernel_size=1, stride=1)
 
     def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
-        # TODO(EliasKng): Simplify, output is not needed except for height_slice
-
-        # The inverse operation of the patch embedding operation, patch_size = (2, 4, 4) as in the original paper
         # Reshape x back to three dimensions
         x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
         x = x.view(x.shape[0], x.shape[1], Z, H, W)  # [1, 384, 8, 181, 360]
 
+        # Slice out surface data
         output = x[:, :, 0, :, :]  # [1, 384, 181, 360]
+
+        # Flatten
         output = output.view(output.shape[0], self.dim, -1)  # [1, 384, 65160]
-        output = self.conv_surface(output)  # [1, 16, 65160]
+
+        # Apply convolution
+        output = self.conv(output)  # [1, 16, 65160]
+
+        # Recover original shape
         output = output.view(
             output.shape[0], 1, self.patch_size[1], self.patch_size[2], H, W
         )  # [1, 1, 4, 4, 181, 360]
         output = torch.permute(output, (0, 1, 4, 2, 5, 3))  # [1, 1, 181, 4, 360, 4]
         output = output.reshape(output.shape[0], 1, 724, 1440)  # [1, 1, 724, 1440]
+
+        # Remove padding
         height_slice = slice(0, 724 - 3)
         output = output[:, :, height_slice, :]  # [1, 1, 721, 1440]
         output = output.view(output.shape[0], 1, 1, 721, 1440)  # [1, 1, 1, 721, 1440]
