@@ -8,6 +8,13 @@ from torch import nn
 import torch
 import copy
 from datetime import datetime
+import warnings
+
+
+warnings.filterwarnings(
+    "ignore",
+    message="None of the inputs have requires_grad=True. Gradients will be None",
+)
 
 
 def train(
