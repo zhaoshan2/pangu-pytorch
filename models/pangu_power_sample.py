@@ -86,17 +86,19 @@ def train(
             if cfg.PG.TRAIN.USE_LSM:
                 device_upper = output.device
                 lsm_expanded = utils_data.loadLandSeaMask(
-                    device_upper, mask_type="sea", fill_value=0
+                    device_upper, mask_type="sea", fill_value=float("nan")
                 )
 
                 # Multiply output_test with the land-sea mask
                 output = output * lsm_expanded
 
             # We use the MAE loss to train the model
-            loss = criterion(output, target)  # [1, 1, 721, 1440]
+            # Mask NaN values in the output
+            mask = ~torch.isnan(output)
+            loss = criterion(output[mask], target[mask])  # [1, 1, 721, 1440]
 
             # Truncate loss to EU area
-            loss = loss[:, :, 721 - 651 : 721 - 466, :183]
+            # loss = loss[:, :, 721 - 651 : 721 - 466, :183]
 
             # Call the backward algorithm and calculate the gratitude of parameters
             # scaler.scale(loss).backward()
