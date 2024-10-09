@@ -160,7 +160,7 @@ if __name__ == "__main__":
             target_modules.append(n)
             print(f"appended {n}")
     config = LoraConfig(
-        r=64,
+        r=16,
         lora_alpha=16,
         target_modules=target_modules,
         lora_dropout=0.1,

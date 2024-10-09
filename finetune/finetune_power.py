@@ -22,9 +22,7 @@ Finetune pangu_power on the energy dataset
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--type_net", type=str, default="finetune_power_output_upsample"
-    )
+    parser.add_argument("--type_net", type=str, default="finetune_power_0610-2_output")
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
@@ -138,7 +136,8 @@ if __name__ == "__main__":
         param.requires_grad = False
 
     for name, param in model.named_parameters():
-        if "_output_layer" in name or "upsample" in name:
+        # if "_output_layer" in name or "upsample" in name:
+        if "_output_layer" in name:
             param.requires_grad = True
             print("Requires grad: ", name)
 
