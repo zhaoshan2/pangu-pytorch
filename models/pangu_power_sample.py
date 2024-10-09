@@ -9,6 +9,7 @@ import torch
 import copy
 from datetime import datetime
 import warnings
+from matplotlib import pyplot as plt
 
 
 warnings.filterwarnings(
@@ -93,7 +94,32 @@ def train(
                 output = output * lsm_expanded
 
             # We use the MAE loss to train the model
-            loss = criterion(output, target)
+            loss = criterion(output, target)  # [1, 1, 721, 1440]
+
+            # Truncate loss
+            loss = loss[:, :, 721 - 651 : 721 - 466, :183]
+
+            # Convert loss to a NumPy array
+            loss_np = loss.detach().cpu().numpy()
+
+            # Plot the loss
+            plt.figure()
+            plt.imshow(loss_np.squeeze(), cmap="viridis", aspect="auto")
+            plt.colorbar(label="Loss Value")
+            plt.title("Loss Map")
+            plt.xlabel("Longitude")
+            plt.ylabel("Latitude")
+
+            png_loss_path = os.path.join(res_path, "png_loss")
+            utils.mkdirs(png_loss_path)
+
+            # Save the plot as a PNG file
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            plt.savefig(os.path.join(png_loss_path, f"loss_map_{timestamp}.png"))
+            plt.close()
+
+            print("Plotted loss map")
 
             # Call the backward algorithm and calculate the gratitude of parameters
             # scaler.scale(loss).backward()
