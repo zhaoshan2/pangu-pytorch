@@ -12,7 +12,7 @@ from torch.optim.adam import Adam
 import os
 from torch.utils import data
 from models.pangu_power_sample import test, train
-from models.pangu_power import PanguPower
+from models.pangu_power import PanguPowerPatchRecovery
 import argparse
 import time
 import logging
@@ -24,7 +24,7 @@ Finetune pangu_power on the energy dataset
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--type_net", type=str, default="finetune_power_0910_output_mask"
+        "--type_net", type=str, default="finetune_power_1010_output_mask"
     )
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         pin_memory=False,
     )
 
-    model = PanguPower(device=device).to(device)
+    model = PanguPowerPatchRecovery(device=device).to(device)
 
     checkpoint = torch.load(
         cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
