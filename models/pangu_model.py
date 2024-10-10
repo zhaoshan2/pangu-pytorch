@@ -119,7 +119,6 @@ if __name__ == "__main__":
 
     x_surface = torch.randn((1, 4, 721, 1440)).to(device)
     x_upper = torch.randn((1, 5, 13, 721, 1440)).to(device)
-    # output, output_surface = model(x_upper, x_surface)
 
     aux_constants = utils_data.loadAllConstants(
         device=device
@@ -134,5 +133,4 @@ if __name__ == "__main__":
         aux_constants["const_h"],
     )  # (1,5,13,721,1440)
 
-    # print(output)
     print(output.shape)
