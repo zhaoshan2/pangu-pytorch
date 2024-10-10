@@ -88,7 +88,7 @@ def setup_model(type: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3")
+    parser.add_argument("--type_net", type=str, default="PanguPowerConv_1_1_1_1")
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
         filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
         startDate="20170101",
         endDate="20171231",
-        freq="24h",
+        freq="6h",
     )
 
     train_dataloader = data.DataLoader(
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
         startDate="20180101",
         endDate="20180228",
-        freq="24h",
+        freq="6h",
     )
 
     val_dataloader = data.DataLoader(
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
         startDate="20180301",
         endDate="20180430",
-        freq="24h",
+        freq="6h",
     )
 
     test_dataloader = data.DataLoader(
