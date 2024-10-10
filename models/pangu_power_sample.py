@@ -199,23 +199,12 @@ def train(
                 png_path = os.path.join(res_path, "png_training")
                 utils.mkdirs(png_path)
 
-                # utils.visuailze(
-                #     output_val.detach().cpu().squeeze(),
-                #     target_val.detach().cpu().squeeze(),
-                #     input_val_raw.squeeze(),
-                #     var="u",
-                #     z=12,
-                #     step=i,
-                #     path=png_path,
-                # )
-                # utils.visuailze_surface(
-                #     output_surface_val.detach().cpu().squeeze(),
-                #     target_surface_val.detach().cpu().squeeze(),
-                #     input_surface_val_raw.squeeze(),
-                #     var="msl",
-                #     step=i,
-                #     path=png_path,
-                # )
+                utils.visuailze_power(
+                    output_val.detach().cpu().squeeze(),
+                    target_val.detach().cpu().squeeze(),
+                    step=i,
+                    path=png_path,
+                )
 
                 # Early stopping
                 if val_loss < best_loss:
