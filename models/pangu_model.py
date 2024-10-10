@@ -4,7 +4,15 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from torch import nn
 import torch
-from models.layers import *
+from models.layers import (
+    PatchEmbedding_pretrain,
+    DownSample,
+    EarthSpecificLayer,
+    UpSample,
+    PatchRecovery_pretrain,
+)
+from timm.models.layers import trunc_normal_
+from era5_data import utils_data
 from collections import OrderedDict
 
 
@@ -98,6 +106,9 @@ class PanguModel(nn.Module):
         # output, output_surface = checkpoint.checkpoint(self._output_layer, x, 8, 181, 360)
         output, output_surface = self._output_layer(x, 8, 181, 360)
 
+        print("output: ", output.shape)
+        print("output_surface: ", output_surface.shape)
+
         return output, output_surface
 
 
@@ -110,13 +121,18 @@ if __name__ == "__main__":
     x_upper = torch.randn((1, 5, 13, 721, 1440)).to(device)
     # output, output_surface = model(x_upper, x_surface)
 
-    # aux_constants = utils.loadAllConstants(
-    #     device=device)  # 'weather_statistics','weather_statistics_last','constant_maps','tele_indices','variable_weights'
-    # # Note the input and target need to be normalized (done within the function)
-    # # Call the model and get the output
-    # output, output_surface = model(x_upper, x_surface, aux_constants['weather_statistics'],
-    #                                 aux_constants['constant_maps'],
-    #                                 aux_constants['const_h'])  # (1,5,13,721,1440)
+    aux_constants = utils_data.loadAllConstants(
+        device=device
+    )  # 'weather_statistics','weather_statistics_last','constant_maps','tele_indices','variable_weights'
+    # Note the input and target need to be normalized (done within the function)
+    # Call the model and get the output
+    output, output_surface = model(
+        x_upper,
+        x_surface,
+        aux_constants["weather_statistics"],
+        aux_constants["constant_maps"],
+        aux_constants["const_h"],
+    )  # (1,5,13,721,1440)
 
-    # # print(output)
-    # print(output.shape)
+    # print(output)
+    print(output.shape)
