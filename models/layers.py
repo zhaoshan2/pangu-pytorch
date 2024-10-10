@@ -841,9 +841,6 @@ class PatchRecoveryPower(nn.Module):
             H,
             W,
         )
-
-        print(output.shape)
-
         # TODO(EliasKng): Reshape & Permute Line 739 & co.
 
         # Reshape to the desired output shape
@@ -946,19 +943,14 @@ class PowerConv(nn.Module):
 
         self.conv_layers = nn.Sequential(*layers)  # Combine layers sequentially
 
-    def forward(self, output_upper, output_surface):
-        # Reshape output1 from [5, 13, 721, 1440] to [5*13, 721, 1440] = [65, 721, 1440]
-        output_upper = output_upper.view(
-            output_upper.size(0) * output_upper.size(1), *output_upper.shape[2:]
+    def forward(self, output1, output2):
+        # Reshape output1 from [1, 5, 13, 721, 1440] to [1, 65, 721, 1440]
+        batch_size = output1.size(0)  # Extract the batch size
+        output1 = output1.reshape(
+            batch_size, output1.size(1) * output1.size(2), *output1.shape[3:]
         )
-
-        # Concatenate with output2 [4, 721, 1440] along the channel dimension
-        concatenated_output = torch.cat(
-            [output_upper, output_surface], dim=0
-        )  # [65+4, 721, 1440]
-
-        # Add batch dimension (if not already) and apply the sequential layers
-        concatenated_output = concatenated_output.unsqueeze(0)  # Add batch dimension
+        # Concatenate with output2 [1, 4, 721, 1440] along the channel dimension
+        concatenated_output = torch.cat([output1, output2], dim=1)
+        # Apply the sequential layers
         output = self.conv_layers(concatenated_output)
-
         return output
