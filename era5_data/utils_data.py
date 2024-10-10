@@ -12,6 +12,7 @@ from typing import Tuple
 import torch
 import random
 from torch.utils import data
+from typing import Optional
 
 
 class DataPrefetcher:
@@ -465,9 +466,9 @@ def loadLandSeaMasksPangu(
 
 
 def loadLandSeaMask(
-    device: torch.device,
+    device: Optional[torch.device] = None,
     mask_type: str = "sea",
-    fill_value=float("nan"),
+    fill_value: float = float("nan"),
 ) -> torch.Tensor:
     # Load the land-sea mask (LSM) from the dataset
     lsm: xr.DataArray = xr.open_dataset(cfg.LSM_PATH, engine="zarr").lsm  # [721, 1440]

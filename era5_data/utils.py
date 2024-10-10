@@ -5,6 +5,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from era5_data.config import cfg
+from era5_data import utils_data as utils_data
 import torch
 
 from torch.nn.modules.module import _addindent
@@ -122,23 +123,22 @@ def visuailze_surface(output, target, input, var, step, path):
 
 
 def visuailze_power(output, target, step, path):
-    fig = plt.figure(figsize=(16, 2))
-    ax1 = fig.add_subplot(143)
-    plot1 = ax1.imshow(output, cmap="RdBu")  # , levels = levels, extend = 'min')
-    plt.colorbar(plot1, ax=ax1, fraction=0.05, pad=0.05)
-    ax1.title.set_text("pred")
+    output = prepare_europe(output)
+    target = prepare_europe(target)
 
-    ax2 = fig.add_subplot(142)
+    fig = plt.figure(figsize=(12, 2))
+
+    ax2 = fig.add_subplot(141)
     plot2 = ax2.imshow(target, cmap="RdBu")
     plt.colorbar(plot2, ax=ax2, fraction=0.05, pad=0.05)
     ax2.title.set_text("gt")
 
-    # ax3 = fig.add_subplot(141)
-    # plot3 = ax3.imshow(input[var, :, :], cmap="RdBu")
-    # plt.colorbar(plot3, ax=ax3, fraction=0.05, pad=0.05)
-    # ax3.title.set_text('input')
+    ax1 = fig.add_subplot(142)
+    plot1 = ax1.imshow(output, cmap="RdBu")  # , levels = levels, extend = 'min')
+    plt.colorbar(plot1, ax=ax1, fraction=0.05, pad=0.05)
+    ax1.title.set_text("pred")
 
-    ax4 = fig.add_subplot(144)
+    ax4 = fig.add_subplot(143)
     plot4 = ax4.imshow(output - target, cmap="RdBu")
     plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
     ax4.title.set_text("bias")
@@ -242,6 +242,20 @@ def save_errorScores(csv_path, z, q, t, u, v, surface, error):
     score_upper_u.to_csv("{}/{}.csv".format(csv_path, f"{error}_upper_u"))
     score_upper_v.to_csv("{}/{}.csv".format(csv_path, f"{error}_upper_v"))
     score_surface.to_csv("{}/{}.csv".format(csv_path, f"{error}_surface"))
+
+
+def prepare_europe(data: torch.Tensor) -> torch.Tensor:
+    """Cut out Europe area from the data and replace land area with NaN."""
+    lsm = utils_data.loadLandSeaMask(
+        device=None, mask_type="sea", fill_value=float("nan")
+    )
+    # Cut out Europe area
+    data = data * lsm
+    data = data.squeeze()
+    data = torch.roll(data, shifts=88, dims=1)
+    data = torch.roll(data, shifts=-70, dims=0)
+    data = data[0:185, 0:271]
+    return data
 
 
 if __name__ == "__main__":
