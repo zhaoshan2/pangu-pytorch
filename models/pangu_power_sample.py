@@ -309,12 +309,12 @@ def test(test_loader, model, device, res_path):
             path=png_path,
         )
 
-        # Save output and target as nc
-        output_path = os.path.join(res_path, "noutputc")
-        utils.mkdirs(output_path)
+        # # Save output and target as nc
+        # output_path = os.path.join(res_path, "noutputc")
+        # utils.mkdirs(output_path)
 
-        torch.save(output_test, os.path.join(output_path, f"output_{target_time}.pth"))
-        torch.save(target_test, os.path.join(output_path, f"target_{target_time}.pth"))
+        # torch.save(output_test, os.path.join(output_path, f"output_{target_time}.pth"))
+        # torch.save(target_test, os.path.join(output_path, f"target_{target_time}.pth"))
 
 
 if __name__ == "__main__":
