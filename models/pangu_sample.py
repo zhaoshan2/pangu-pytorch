@@ -91,7 +91,7 @@ def train(
             if cfg.PG.TRAIN.USE_LSM:
                 loss_surface_device = loss_surface.device
                 loss_upper_device = loss_upper.device
-                lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasks(
+                lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasksPangu(
                     loss_upper_device,
                     loss_surface_device,
                     mask_type="sea",
@@ -197,7 +197,7 @@ def train(
                         (
                             lsm_expanded,
                             lsm_surface_expanded,
-                        ) = utils_data.loadLandSeaMasks(
+                        ) = utils_data.loadLandSeaMasksPangu(
                             val_loss_upper_device,
                             val_loss_surface_device,
                             mask_type="sea",
@@ -340,7 +340,7 @@ def test(test_loader, model, device, res_path):
         if cfg.PG.TEST.USE_LSM:
             device_upper = output_test.device
             device_surface = output_surface_test.device
-            lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasks(
+            lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasksPangu(
                 device_upper, device_surface, mask_type="sea", fill_value=float("nan")
             )
 
