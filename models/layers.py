@@ -902,3 +902,63 @@ class PatchRecoveryPowerSurface(nn.Module):
         # output_surface = output_surface * self.surface_std + self.surface_mean
         output = output.view(output.shape[0], 1, 721, 1440)  # [1, 1, 721, 1440]
         return output
+
+
+class PowerPanguConv(nn.Module):
+    """
+    A (series of) convolutional layer(s) to finetune on the power prediction task.
+    Attributes:
+        conv_layers (nn.Sequential): A sequential container of convolutional layers,
+                                     batch normalization layers, and ReLU activation functions.
+    """
+
+    def __init__(
+        self, in_channels=69, out_channels_list=[1], kernel_size=3, stride=1, padding=1
+    ):
+        """
+        Initializes the PowerPanguConv class with the given parameters.
+        Args:
+            in_channels (int): Number of input channels for the first convolutional layer. Default is 69.
+            out_channels_list (list): List of output channels for each convolutional layer. Default is [1]. Could also be e.g., [64, 32, 16, 1].
+            kernel_size (int or tuple): Size of the convolving kernel. Default is 3.
+            stride (int or tuple): Stride of the convolution. Default is 1.
+            padding (int or tuple): Zero-padding added to both sides of the input. Default is 1.
+        """
+        super().__init__()
+
+        layers = []
+        current_in_channels = in_channels
+
+        # Build multiple convolutional layers
+        for out_channels in out_channels_list:
+            layers.append(
+                nn.Conv2d(
+                    in_channels=current_in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=padding,
+                )
+            )
+            layers.append(nn.BatchNorm2d(out_channels))  # Add batch normalization
+            layers.append(nn.ReLU())  # Add ReLU activation function
+            current_in_channels = out_channels
+
+        self.conv_layers = nn.Sequential(*layers)  # Combine layers sequentially
+
+    def forward(self, output_upper, output_surface):
+        # Reshape output1 from [5, 13, 721, 1440] to [5*13, 721, 1440] = [65, 721, 1440]
+        output_upper = output_upper.view(
+            output_upper.size(0) * output_upper.size(1), *output_upper.shape[2:]
+        )
+
+        # Concatenate with output2 [4, 721, 1440] along the channel dimension
+        concatenated_output = torch.cat(
+            [output_upper, output_surface], dim=0
+        )  # [65+4, 721, 1440]
+
+        # Add batch dimension (if not already) and apply the sequential layers
+        concatenated_output = concatenated_output.unsqueeze(0)  # Add batch dimension
+        output = self.conv_layers(concatenated_output)
+
+        return output
