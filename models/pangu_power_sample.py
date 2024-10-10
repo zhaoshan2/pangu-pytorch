@@ -83,21 +83,18 @@ def train(
                 aux_constants["const_h"],
             )  # (1,5,13,721,1440) & (1, 4, 721, 1440)
 
-            if cfg.PG.TRAIN.USE_LSM:
-                device_upper = output.device
-                lsm_expanded = utils_data.loadLandSeaMask(
-                    device_upper, mask_type="sea", fill_value=0
-                )
+            device_upper = output.device
+            lsm_expanded = utils_data.loadLandSeaMask(
+                device_upper, mask_type="sea", fill_value=0
+            )
 
-                # Mask 0 values, they should be ignored during backward pass
-                mask_not_zero = ~(lsm_expanded == 0)
-                mask_not_zero = mask_not_zero.unsqueeze(1)
+            # Mask 0 values, they should be ignored during backward pass
+            mask_not_zero = ~(lsm_expanded == 0)
+            mask_not_zero = mask_not_zero.unsqueeze(1)
 
-                # Multiply output_test with the land-sea mask
-                output = output * lsm_expanded
-                loss = criterion(output[mask_not_zero], target[mask_not_zero])
-            else:
-                loss = criterion(output, target)
+            # Multiply output_test with the land-sea mask
+            output = output * lsm_expanded
+            loss = criterion(output[mask_not_zero], target[mask_not_zero])
 
             # Call the backward algorithm and calculate the gratitude of parameters
             # scaler.scale(loss).backward()
@@ -176,23 +173,20 @@ def train(
                         aux_constants["const_h"],
                     )
 
-                    if cfg.PG.TRAIN.USE_LSM:
-                        device_val = output_val.device
-                        lsm_expanded = utils_data.loadLandSeaMask(
-                            device_val, mask_type="sea", fill_value=0
-                        )
+                    device_val = output_val.device
+                    lsm_expanded = utils_data.loadLandSeaMask(
+                        device_val, mask_type="sea", fill_value=0
+                    )
 
-                        # Mask 0 values, they should be ignored during backward pass
-                        mask_not_zero = ~(lsm_expanded == 0)
-                        mask_not_zero = mask_not_zero.unsqueeze(1)
+                    # Mask 0 values, they should be ignored during backward pass
+                    mask_not_zero = ~(lsm_expanded == 0)
+                    mask_not_zero = mask_not_zero.unsqueeze(1)
 
-                        # Multiply output_test with the land-sea mask
-                        output_val = output_val * lsm_expanded
-                        loss = criterion(
-                            output_val[mask_not_zero], target_val[mask_not_zero]
-                        )
-                    else:
-                        loss = criterion(output, target)
+                    # Multiply output_test with the land-sea mask
+                    output_val = output_val * lsm_expanded
+                    loss = criterion(
+                        output_val[mask_not_zero], target_val[mask_not_zero]
+                    )
 
                     loss = torch.mean(loss)
                     val_loss += loss.item()
