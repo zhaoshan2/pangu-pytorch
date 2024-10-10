@@ -62,7 +62,7 @@ if __name__ == "__main__":
     model = PanguPowerPatchRecovery(device=device).to(device)
 
     checkpoint = torch.load(
-        "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/finetune_power_1010_output_mask/24/models/train_3.pth",
+        "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/finetune_power_1010_output_mask/24/models/train_21.pth",
         map_location=device,
         weights_only=False,
     )
