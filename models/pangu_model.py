@@ -106,9 +106,6 @@ class PanguModel(nn.Module):
         # output, output_surface = checkpoint.checkpoint(self._output_layer, x, 8, 181, 360)
         output, output_surface = self._output_layer(x, 8, 181, 360)
 
-        print("output: ", output.shape)
-        print("output_surface: ", output_surface.shape)
-
         return output, output_surface
 
 
