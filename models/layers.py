@@ -910,7 +910,7 @@ class PowerConv(nn.Module):
     """
 
     def __init__(
-        self, in_channels=28, out_channels_list=[1], kernel_size=1, stride=1, padding=1
+        self, in_channels=28, out_channels_list=[1], kernel_size=1, stride=1, padding=0
     ):
         """
         Initializes the PowerPanguConv class with the given parameters.
