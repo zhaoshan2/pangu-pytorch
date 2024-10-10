@@ -62,12 +62,10 @@ if __name__ == "__main__":
     model = PanguPower(device=device).to(device)
 
     checkpoint = torch.load(
-        "wind_fusion/pangu_pytorch/result/finetune_power_0910-2_output_trunc/24/models/train_7.pth",
+        "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/finetune_power_0910_output_mask/24/models/train_5.pth",
         map_location=device,
         weights_only=False,
     )
-    for key, value in checkpoint["model"].items():
-        print(f"{key}: {value.size()}")
     model.load_state_dict(checkpoint["model"])
 
     # # Load pretrained weights and replace last Layer(s)
