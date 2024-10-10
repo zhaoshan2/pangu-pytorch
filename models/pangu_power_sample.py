@@ -299,12 +299,22 @@ def test(test_loader, model, device, res_path):
         utils.mkdirs(png_path)
 
         # ['msl', 'u','v','t2m']
+
+        output_test = output_test.detach().cpu().squeeze()
+        target_test = target_test.detach().cpu().squeeze()
         utils.visuailze_power(
-            output_test.detach().cpu().squeeze(),
-            target_test.detach().cpu().squeeze(),
+            output_test,
+            target_test,
             step=target_time,
             path=png_path,
         )
+
+        # Save output and target as nc
+        output_path = os.path.join(res_path, "noutputc")
+        utils.mkdirs(output_path)
+
+        torch.save(output_test, os.path.join(output_path, f"output_{target_time}.pth"))
+        torch.save(target_test, os.path.join(output_path, f"target_{target_time}.pth"))
 
 
 if __name__ == "__main__":
