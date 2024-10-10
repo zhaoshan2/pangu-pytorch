@@ -12,7 +12,7 @@ from torch.optim.adam import Adam
 import os
 from torch.utils import data
 from models.pangu_power_sample import test, train
-from models.pangu_power import PanguPowerPatchRecovery
+from models.pangu_power import PanguPowerPatchRecovery, PanguPowerConv
 import argparse
 import time
 import logging
@@ -21,11 +21,63 @@ from tensorboardX import SummaryWriter
 """
 Finetune pangu_power on the energy dataset
 """
+
+
+def setup_model(type: str):
+    """Loads the specified model and sets requires_grad
+
+    Parameters
+    ----------
+    type : str
+        Which model to load
+    """
+    if type == "PanguPowerPatchRecovery":
+        model = PanguPowerPatchRecovery(device=device).to(device)
+
+        checkpoint = torch.load(
+            cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
+        )
+
+        pretrained_dict = checkpoint["model"]
+        model_dict = model.state_dict()
+
+        # Filter out keys in pretrained_dict that belong to _output_layer (conv and conv_surface)
+        pretrained_dict = {
+            k: v for k, v in pretrained_dict.items() if "_output_layer" not in k
+        }
+
+        # Update the model's state_dict except the _output_layer
+        model_dict.update(pretrained_dict)
+
+        # Load the updated state_dict into the model
+        model.load_state_dict(model_dict)
+
+        # Only finetune the last layer
+        for param in model.parameters():
+            param.requires_grad = False
+
+        for name, param in model.named_parameters():
+            # if "_output_layer" in name or "upsample" in name:
+            if "_output_layer" in name:
+                param.requires_grad = True
+                print("Requires grad: ", name)
+
+    elif type == "PanguPowerConv":
+        model = PanguPowerConv(device=device).to(device)
+        checkpoint = torch.load(
+            cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=True
+        )
+        print("Loaded pangu power conv model")
+        model.load_state_dict(checkpoint["model"], strict=False)
+    else:
+        raise ValueError("Model not found")
+
+    return model
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--type_net", type=str, default="finetune_power_1010_output_mask"
-    )
+    parser.add_argument("--type_net", type=str, default="PanguPowerConv1")
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
@@ -114,35 +166,7 @@ if __name__ == "__main__":
         pin_memory=False,
     )
 
-    model = PanguPowerPatchRecovery(device=device).to(device)
-
-    checkpoint = torch.load(
-        cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
-    )
-
-    pretrained_dict = checkpoint["model"]
-    model_dict = model.state_dict()
-
-    # Filter out keys in pretrained_dict that belong to _output_layer (conv and conv_surface)
-    pretrained_dict = {
-        k: v for k, v in pretrained_dict.items() if "_output_layer" not in k
-    }
-
-    # Update the model's state_dict except the _output_layer
-    model_dict.update(pretrained_dict)
-
-    # Load the updated state_dict into the model
-    model.load_state_dict(model_dict)
-
-    # Only finetune the last layer
-    for param in model.parameters():
-        param.requires_grad = False
-
-    for name, param in model.named_parameters():
-        # if "_output_layer" in name or "upsample" in name:
-        if "_output_layer" in name:
-            param.requires_grad = True
-            print("Requires grad: ", name)
+    model = setup_model("PanguPowerConv")
 
     optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),

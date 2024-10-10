@@ -904,7 +904,7 @@ class PatchRecoveryPowerSurface(nn.Module):
         return output
 
 
-class PowerPanguConv(nn.Module):
+class PowerConv(nn.Module):
     """
     A (series of) convolutional layer(s) to finetune on the power prediction task.
     Attributes:

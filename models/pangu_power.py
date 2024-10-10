@@ -5,7 +5,7 @@ from torch import Tensor
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import torch
-from models.layers import PatchRecoveryPowerSurface, PowerPanguConv
+from models.layers import PatchRecoveryPowerSurface, PowerConv
 from models.pangu_model import PanguModel
 
 
@@ -93,10 +93,7 @@ class PanguPowerConv(PanguModel):
             device=device,
         )
 
-        # Replace the output layer with PatchRecovery_transfer
-        self._output_layer = PatchRecoveryPowerSurface(dims[-2])  # dims[-2] = 384
-
-        self._conv_power_layers = PowerPanguConv()
+        self._conv_power_layers = PowerConv()
 
         # Re-Init weights
         super(PanguPowerConv, self).apply(self._init_weights)
