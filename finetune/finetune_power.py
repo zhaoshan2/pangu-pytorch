@@ -88,7 +88,7 @@ def setup_model(type: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="PanguPowerConv1")
+    parser.add_argument("--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3")
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
