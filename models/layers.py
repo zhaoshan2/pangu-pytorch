@@ -910,14 +910,14 @@ class PowerConv(nn.Module):
     """
 
     def __init__(
-        self, in_channels=28, out_channels_list=[1], kernel_size=3, stride=1, padding=1
+        self, in_channels=28, out_channels_list=[1], kernel_size=1, stride=1, padding=1
     ):
         """
         Initializes the PowerPanguConv class with the given parameters.
         Args:
             in_channels (int): Number of input channels for the first convolutional layer. Default is 28. (u and v for 13 pressure levels, u10m, v10m)
             out_channels_list (list): List of output channels for each convolutional layer. Default is [1]. Could also be e.g., [64, 32, 16, 1].
-            kernel_size (int or tuple): Size of the convolving kernel. Default is 3.
+            kernel_size (int or tuple): Size of the convolving kernel. Default is 1.
             stride (int or tuple): Stride of the convolution. Default is 1.
             padding (int or tuple): Zero-padding added to both sides of the input. Default is 1.
         """
@@ -946,18 +946,19 @@ class PowerConv(nn.Module):
     def forward(self, output_upper, output_surface):
         # Slice out wind variables
         output_upper = output_upper[:, -2:, :, :, :]
-        print(output_upper.shape)
         output_surface = output_surface[:, 1:3, :, :]
 
-        # Reshape output1 from [1, 2, 13, 721, 1440] to [1, 26, 721, 1440]
+        # Reshape output_upper from [1, 2, 13, 721, 1440] to [1, 26, 721, 1440]
         batch_size = output_upper.size(0)  # Extract the batch size
         output_upper = output_upper.reshape(
             batch_size,
             output_upper.size(1) * output_upper.size(2),
             *output_upper.shape[3:],
         )
-        # Concatenate with output2 [1, 2, 721, 1440] along the channel dimension
+
+        # Concatenate with output_surface [1, 2, 721, 1440] along the channel dimension
         concatenated_output = torch.cat([output_upper, output_surface], dim=1)
+
         # Apply the sequential layers
         output = self.conv_layers(concatenated_output)
         return output
