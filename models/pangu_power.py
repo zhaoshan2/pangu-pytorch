@@ -98,6 +98,9 @@ class PanguPowerConv(PanguModel):
 
         self._conv_power_layers = PowerPanguConv()
 
+        # Re-Init weights
+        super(PanguPowerConv, self).apply(self._init_weights)
+
     def forward(self, input, input_surface, statistics, maps, const_h):
         """Backbone architecture"""
         # Embed the input fields into patches
