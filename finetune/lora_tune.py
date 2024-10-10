@@ -9,6 +9,7 @@ from models.pangu_model import PanguModel
 from torch import nn
 import torch
 from torch.utils import data
+from torch.optim.adam import Adam
 from models.pangu_sample import test, train
 import argparse
 import time
@@ -170,7 +171,7 @@ if __name__ == "__main__":
     module_copy = copy.deepcopy(model)  # we keep a copy of the original model for later
 
     peft_model = get_peft_model(model, config)
-    optimizer = torch.optim.Adam(
+    optimizer = Adam(
         peft_model.parameters(),
         lr=cfg.PG.TRAIN.LR,
         weight_decay=cfg.PG.TRAIN.WEIGHT_DECAY,
