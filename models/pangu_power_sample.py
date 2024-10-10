@@ -86,20 +86,23 @@ def train(
             if cfg.PG.TRAIN.USE_LSM:
                 device_upper = output.device
                 lsm_expanded = utils_data.loadLandSeaMask(
-                    device_upper, mask_type="sea", fill_value=float("nan")
+                    device_upper, mask_type="sea", fill_value=0
                 )
+
+                # Mask 0 values, they should be ignored during backward pass
+                mask_not_zero = ~(lsm_expanded == 0)
+                mask_not_zero = mask_not_zero.unsqueeze(1)
 
                 # Multiply output_test with the land-sea mask
                 output = output * lsm_expanded
-
-            # We use the MAE loss to train the model
-            # Mask NaN values in the output
-            mask = ~torch.isnan(output)
-            loss = criterion(output[mask], target[mask])  # [1, 1, 721, 1440]
+                loss = criterion(output[mask_not_zero], target[mask_not_zero])
+            else:
+                loss = criterion(output, target)
 
             # Call the backward algorithm and calculate the gratitude of parameters
             # scaler.scale(loss).backward()
             loss = torch.mean(loss)
+            print("loss", loss.item())
             loss.backward()
 
             # Update model parameters with Adam optimizer
@@ -179,13 +182,18 @@ def train(
                             device_val, mask_type="sea", fill_value=0
                         )
 
+                        # Mask 0 values, they should be ignored during backward pass
+                        mask_not_zero = ~(lsm_expanded == 0)
+                        mask_not_zero = mask_not_zero.unsqueeze(1)
+
                         # Multiply output_test with the land-sea mask
                         output_val = output_val * lsm_expanded
+                        loss = criterion(
+                            output_val[mask_not_zero], target_val[mask_not_zero]
+                        )
+                    else:
+                        loss = criterion(output, target)
 
-                    loss = criterion(output_val, target_val)
-
-                    # Truncate loss to EU area
-                    loss = loss[:, :, 721 - 651 : 721 - 466, :183]
                     loss = torch.mean(loss)
                     val_loss += loss.item()
 
