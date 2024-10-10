@@ -5,7 +5,7 @@ from torch import Tensor
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import torch
-from models.layers import PatchRecovery_power_surface
+from models.layers import PatchRecoveryPowerSurface
 from models.pangu_model import PanguModel
 
 
@@ -27,7 +27,7 @@ class PanguPower(PanguModel):
         )
 
         # Replace the output layer with PatchRecovery_transfer
-        self._output_layer = PatchRecovery_power_surface(dims[-2])  # dims[-2] = 384
+        self._output_layer = PatchRecoveryPowerSurface(dims[-2])  # dims[-2] = 384
 
     def forward(
         self,

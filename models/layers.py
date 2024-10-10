@@ -1,4 +1,3 @@
-# The pseudocode can be implemented using deep learning libraries, e.g., Pytorch and Tensorflow or other high-level APIs
 import sys
 import os
 
@@ -803,7 +802,7 @@ class PatchRecovery_pretrain(nn.Module):
         return output, output_surface
 
 
-class PatchRecovery_power(nn.Module):
+class PatchRecoveryPower(nn.Module):
     """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440])"""
 
     def __init__(self, dim):
@@ -861,7 +860,7 @@ class PatchRecovery_power(nn.Module):
         return output
 
 
-class PatchRecovery_power_surface(nn.Module):
+class PatchRecoveryPowerSurface(nn.Module):
     """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440]).
     Processing both surface and atmospheric in one step (with one convolution) is not done, since for atmospheric variables
     the data has 5 vars on 13 pressure levels, for surface, there are 4 vars on 1 level (ground).
@@ -903,10 +902,3 @@ class PatchRecovery_power_surface(nn.Module):
         # output_surface = output_surface * self.surface_std + self.surface_mean
         output = output.view(output.shape[0], 1, 721, 1440)  # [1, 1, 721, 1440]
         return output
-
-
-if __name__ == "__main__":
-    pr = PatchRecovery_power_surface(384)
-    Z, H, W = 8, 181, 360
-    output = pr.forward(torch.randn(1, 521280, 384), Z, H, W)
-    print(output.shape)
