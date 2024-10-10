@@ -69,6 +69,17 @@ def setup_model(type: str):
         )
         print("Loaded pangu power conv model")
         model.load_state_dict(checkpoint["model"], strict=False)
+
+        # Only finetune the last layer
+        for param in model.parameters():
+            param.requires_grad = False
+
+        for name, param in model.named_parameters():
+            # if "_output_layer" in name or "upsample" in name:
+            if "_conv_power_layers" in name:
+                param.requires_grad = True
+                print("Requires grad: ", name)
+
     else:
         raise ValueError("Model not found")
 
