@@ -41,10 +41,11 @@ def calculate_loss(output, target, criterion, lsm_expanded):
     return torch.mean(loss)
 
 
-def visualize(output, target, step, path):
+def visualize(output, target, input, step, path):
     utils.visuailze_power(
         output.detach().cpu().squeeze(),
         target.detach().cpu().squeeze(),
+        input.detach().cpu().squeeze(),
         step=step,
         path=path,
     )
@@ -152,7 +153,7 @@ def train(
                 logger.info("Validate at Epoch {} : {:.3f}".format(i, val_loss))
                 png_path = os.path.join(res_path, "png_training")
                 utils.mkdirs(png_path)
-                visualize(output_val, target_val, i, png_path)
+                visualize(output_val, target_val, input_surface_val, i, png_path)
 
                 if val_loss < best_loss:
                     best_loss = val_loss
@@ -199,7 +200,7 @@ def test(test_loader, model, device, res_path):
         target_time = periods_test[1][0]
         png_path = os.path.join(res_path, "png")
         utils.mkdirs(png_path)
-        visualize(output_test, target_test, target_time, png_path)
+        visualize(output_test, target_test, input_surface_test, target_time, png_path)
 
 
 if __name__ == "__main__":
