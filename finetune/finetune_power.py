@@ -65,10 +65,12 @@ def setup_model(type: str):
     elif type == "PanguPowerConv":
         model = PanguPowerConv(device=device).to(device)
         checkpoint = torch.load(
-            cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=True
+            "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3/24/models/best_model.pth",
+            map_location=device,
+            weights_only=True,
         )
         print("Loaded pangu power conv model")
-        model.load_state_dict(checkpoint["model"], strict=False)
+        model.load_state_dict(checkpoint["model"], strict=True)
 
         # Only finetune the last layer
         for param in model.parameters():
@@ -88,7 +90,9 @@ def setup_model(type: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="PanguPowerConv_1_1_1_1")
+    parser.add_argument(
+        "--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3_2"
+    )
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
