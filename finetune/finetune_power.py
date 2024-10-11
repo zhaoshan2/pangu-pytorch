@@ -53,39 +53,35 @@ def setup_model(type: str):
         model.load_state_dict(model_dict)
 
         # Only finetune the last layer
-        for param in model.parameters():
-            param.requires_grad = False
-
-        for name, param in model.named_parameters():
-            # if "_output_layer" in name or "upsample" in name:
-            if "_output_layer" in name:
-                param.requires_grad = True
-                print("Requires grad: ", name)
+        set_requires_grad(model, "_output_layer")
 
     elif type == "PanguPowerConv":
         model = PanguPowerConv(device=device).to(device)
         checkpoint = torch.load(
             "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3/24/models/best_model.pth",
             map_location=device,
-            weights_only=True,
+            weights_only=False,
         )
         print("Loaded pangu power conv model")
         model.load_state_dict(checkpoint["model"], strict=True)
 
         # Only finetune the last layer
-        for param in model.parameters():
-            param.requires_grad = False
-
-        for name, param in model.named_parameters():
-            # if "_output_layer" in name or "upsample" in name:
-            if "_conv_power_layers" in name:
-                param.requires_grad = True
-                print("Requires grad: ", name)
+        set_requires_grad(model, "_conv_power_layers")
 
     else:
         raise ValueError("Model not found")
 
     return model
+
+
+def set_requires_grad(model, layer_name):
+    for param in model.parameters():
+        param.requires_grad = False
+
+    for name, param in model.named_parameters():
+        if layer_name in name:
+            param.requires_grad = True
+            print("Requires grad: ", name)
 
 
 if __name__ == "__main__":
