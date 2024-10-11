@@ -912,10 +912,10 @@ class PowerConv(nn.Module):
     def __init__(
         self,
         in_channels=28,
-        out_channels_list=[1, 1, 1, 1],
-        kernel_size=1,
+        out_channels_list=[64, 128, 64, 1],
+        kernel_size=3,
         stride=1,
-        padding=0,
+        padding=1,
     ):
         """
         Initializes the PowerPanguConv class with the given parameters.
@@ -940,6 +940,7 @@ class PowerConv(nn.Module):
                     kernel_size=kernel_size,
                     stride=stride,
                     padding=padding,
+                    padding_mode="circular",
                 )
             )
             layers.append(nn.BatchNorm2d(out_channels))  # Add batch normalization
@@ -967,3 +968,25 @@ class PowerConv(nn.Module):
         # Apply the sequential layers
         output = self.conv_layers(concatenated_output)
         return output
+
+
+class PowerConvWithSigmoid(PowerConv):
+    """Replaces the last layer of PowerConv with a Sigmoid layer to better reflect the output range of wind power generation which is between [0, 1]"""
+
+    def __init__(
+        self,
+        in_channels,
+        out_channels_list,
+        kernel_size,
+        stride,
+        padding,
+    ):
+        super().__init__(in_channels, out_channels_list, kernel_size, stride, padding)
+
+        # Replace the last ReLU layer with a Sigmoid layer
+        if isinstance(self.conv_layers[-1], nn.ReLU):
+            self.conv_layers[-1] = nn.Sigmoid()
+        else:
+            raise ValueError(
+                "The last layer is not a ReLU layer and cannot be replaced with Sigmoid."
+            )
