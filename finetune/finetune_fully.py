@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     PATH = cfg.PG_INPUT_PATH
 
-    opt = {"gpu_ids": [0, 1, 2, 3, 4, 5, 6, 7]}
+    opt = {"gpu_ids": [0, 1, 2, 3]}
     gpu_list = ",".join(str(x) for x in opt["gpu_ids"])
     # gpu_list = str(opt['gpu_ids'])
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_list
