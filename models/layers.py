@@ -928,6 +928,13 @@ class PowerConv(nn.Module):
         """
         super().__init__()
 
+        print("PowerConv initialized with the following parameters:")
+        print(f"in_channels: {in_channels}")
+        print(f"out_channels_list: {out_channels_list}")
+        print(f"kernel_size: {kernel_size}")
+        print(f"stride: {stride}")
+        print(f"padding: {padding}")
+
         layers = []
         current_in_channels = in_channels
 
