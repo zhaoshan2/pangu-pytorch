@@ -27,10 +27,10 @@ def setup_model(model_type: str, device: torch.device) -> torch.nn.Module:
 
     Parameters
     ----------
-    type : str
+    model_type : str
         Which model to load
     """
-    if type == "PanguPowerPatchRecovery":
+    if model_type == "PanguPowerPatchRecovery":
         model = PanguPowerPatchRecovery(device=device).to(device)
 
         checkpoint = torch.load(
@@ -54,10 +54,10 @@ def setup_model(model_type: str, device: torch.device) -> torch.nn.Module:
         # Only finetune the last layer
         set_requires_grad(model, "_output_layer")
 
-    elif type == "PanguPowerConv":
+    elif model_type == "PanguPowerConv":
         model = PanguPowerConv(device=device).to(device)
         checkpoint = torch.load(
-            "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3_2/24/models/best_model.pth",
+            "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3_2/24/models/train_6.pth",
             map_location=device,
             weights_only=False,
         )
