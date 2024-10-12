@@ -74,6 +74,24 @@ def setup_model(type: str):
     return model
 
 
+def create_dataloader(start, end, freq, batch_size, shuffle):
+    dataset = energy_dataset.EnergyDataset(
+        filepath_era5=cfg.ERA5_PATH,
+        filepath_power=cfg.POWER_PATH,
+        startDate=start,
+        endDate=end,
+        freq=freq,
+    )
+    return data.DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        drop_last=True,
+        shuffle=shuffle,
+        num_workers=0,
+        pin_memory=False,
+    )
+
+
 def set_requires_grad(model, layer_name):
     for param in model.parameters():
         param.requires_grad = False
@@ -123,58 +141,26 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(logger_name)
 
-    train_dataset = energy_dataset.EnergyDataset(
-        filepath_era5=cfg.ERA5_PATH,
-        filepath_power=cfg.POWER_PATH,
-        startDate=cfg.PG.TRAIN.START_TIME,
-        endDate=cfg.PG.TRAIN.END_TIME,
-        freq=cfg.PG.TRAIN.FREQUENCY,
+    train_dataloader = create_dataloader(
+        cfg.PG.TRAIN.START_TIME,
+        cfg.PG.TRAIN.END_TIME,
+        cfg.PG.TRAIN.FREQUENCY,
+        cfg.PG.TRAIN.BATCH_SIZE,
+        True,
     )
-
-    train_dataloader = data.DataLoader(
-        dataset=train_dataset,
-        batch_size=cfg.PG.TRAIN.BATCH_SIZE,
-        drop_last=True,
-        shuffle=True,
-        num_workers=0,
-        pin_memory=False,
+    val_dataloader = create_dataloader(
+        cfg.VAL.START_TIME,
+        cfg.VAL.END_TIME,
+        cfg.PG.VAL.FREQUENCY,
+        cfg.PG.VAL.BATCH_SIZE,
+        False,
     )
-
-    dataset_length = len(train_dataloader)
-    print("dataset_length", dataset_length)
-
-    val_dataset = energy_dataset.EnergyDataset(
-        filepath_era5=cfg.ERA5_PATH,
-        filepath_power=cfg.POWER_PATH,
-        startDate=cfg.VAL.START_TIME,
-        endDate=cfg.VAL.END_TIME,
-        freq=cfg.PG.VAL.FREQUENCY,
-    )
-
-    val_dataloader = data.DataLoader(
-        dataset=val_dataset,
-        batch_size=cfg.PG.VAL.BATCH_SIZE,
-        drop_last=True,
-        shuffle=False,
-        num_workers=0,
-        pin_memory=False,
-    )
-
-    test_dataset = energy_dataset.EnergyDataset(
-        filepath_era5=cfg.ERA5_PATH,
-        filepath_power=cfg.POWER_PATH,
-        startDate=cfg.TEST.START_TIME,
-        endDate=cfg.TEST.END_TIME,
-        freq=cfg.PG.TEST.FREQUENCY,
-    )
-
-    test_dataloader = data.DataLoader(
-        dataset=test_dataset,
-        batch_size=cfg.PG.TEST.BATCH_SIZE,
-        drop_last=True,
-        shuffle=False,
-        num_workers=0,
-        pin_memory=False,
+    test_dataloader = create_dataloader(
+        cfg.TEST.START_TIME,
+        cfg.TEST.END_TIME,
+        cfg.PG.TEST.FREQUENCY,
+        cfg.PG.TEST.BATCH_SIZE,
+        False,
     )
 
     model = setup_model("PanguPowerConv")
