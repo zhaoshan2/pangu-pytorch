@@ -12,7 +12,11 @@ from torch.optim.adam import Adam
 import os
 from torch.utils import data
 from models.pangu_power_sample import test, train
-from models.pangu_power import PanguPowerPatchRecovery, PanguPowerConv
+from models.pangu_power import (
+    PanguPowerPatchRecovery,
+    PanguPowerConv,
+    PanguPowerConvSigmoid,
+)
 import argparse
 import logging
 from tensorboardX import SummaryWriter
@@ -61,10 +65,17 @@ def setup_model(model_type: str, device: torch.device) -> torch.nn.Module:
             map_location=device,
             weights_only=False,
         )
-        print("Loaded pangu power conv model")
         model.load_state_dict(checkpoint["model"])
 
         # Only finetune the last layer
+        set_requires_grad(model, "_conv_power_layers")
+
+    elif model_type == "PanguPowerConvSigmoid":
+        model = PanguPowerConvSigmoid(device=device).to(device)
+        checkpoint = torch.load(
+            cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
+        )
+        model.load_state_dict(checkpoint["model"], strict=False)
         set_requires_grad(model, "_conv_power_layers")
 
     else:
@@ -170,7 +181,7 @@ def main(args: argparse.Namespace) -> None:
         False,
     )
 
-    model = setup_model("PanguPowerConv", device)
+    model = setup_model("PanguPowerConvSigmoid", device)
 
     optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -187,7 +198,7 @@ def main(args: argparse.Namespace) -> None:
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[25, 50], gamma=0.5
     )
-    start_epoch = 7
+    start_epoch = 1
 
     model = train(
         model,
@@ -220,7 +231,7 @@ def main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3_2"
+        "--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3_sigmoid"
     )
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")

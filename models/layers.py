@@ -980,15 +980,8 @@ class PowerConv(nn.Module):
 class PowerConvWithSigmoid(PowerConv):
     """Replaces the last layer of PowerConv with a Sigmoid layer to better reflect the output range of wind power generation which is between [0, 1]"""
 
-    def __init__(
-        self,
-        in_channels,
-        out_channels_list,
-        kernel_size,
-        stride,
-        padding,
-    ):
-        super().__init__(in_channels, out_channels_list, kernel_size, stride, padding)
+    def __init__(self):
+        super().__init__()
 
         # Replace the last ReLU layer with a Sigmoid layer
         if isinstance(self.conv_layers[-1], nn.ReLU):

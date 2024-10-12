@@ -158,10 +158,4 @@ class PanguPowerConvSigmoid(PanguPowerConv):
             device=device,
         )
 
-        self._conv_power_layers = PowerConvWithSigmoid(
-            in_channels=28,
-            out_channels_list=[64, 1],
-            kernel_size=3,
-            stride=1,
-            padding=1,
-        )
+        self._conv_power_layers = PowerConvWithSigmoid()
