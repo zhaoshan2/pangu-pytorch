@@ -5,7 +5,7 @@ from torch import Tensor
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import torch
-from models.layers import PatchRecoveryPowerSurface, PowerConv
+from models.layers import PatchRecoveryPowerSurface, PowerConv, PowerConvWithSigmoid
 from models.pangu_model import PanguModel
 
 
@@ -139,3 +139,29 @@ class PanguPowerConv(PanguModel):
         output_power = self._conv_power_layers(output_upper, output_surface)
 
         return output_power
+
+
+class PanguPowerConvSigmoid(PanguPowerConv):
+    def __init__(
+        self,
+        depths: List[int] = [2, 6, 6, 2],
+        num_heads: List[int] = [6, 12, 12, 6],
+        dims: List[int] = [192, 384, 384, 192],
+        patch_size: Tuple[int, int, int] = (2, 4, 4),
+        device: Optional[torch.device] = None,
+    ) -> None:
+        super(PanguPowerConvSigmoid, self).__init__(
+            depths=depths,
+            num_heads=num_heads,
+            dims=dims,
+            patch_size=patch_size,
+            device=device,
+        )
+
+        self._conv_power_layers = PowerConvWithSigmoid(
+            in_channels=28,
+            out_channels_list=[64, 1],
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
