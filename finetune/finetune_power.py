@@ -14,7 +14,6 @@ from torch.utils import data
 from models.pangu_power_sample import test, train
 from models.pangu_power import PanguPowerPatchRecovery, PanguPowerConv
 import argparse
-import time
 import logging
 from tensorboardX import SummaryWriter
 
@@ -23,7 +22,7 @@ Finetune pangu_power on the energy dataset
 """
 
 
-def setup_model(type: str):
+def setup_model(model_type: str, device: torch.device) -> torch.nn.Module:
     """Loads the specified model and sets requires_grad
 
     Parameters
@@ -58,7 +57,7 @@ def setup_model(type: str):
     elif type == "PanguPowerConv":
         model = PanguPowerConv(device=device).to(device)
         checkpoint = torch.load(
-            "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3/24/models/train_4.pth",
+            "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3_2/24/models/best_model.pth",
             map_location=device,
             weights_only=False,
         )
@@ -74,7 +73,9 @@ def setup_model(type: str):
     return model
 
 
-def create_dataloader(start, end, freq, batch_size, shuffle):
+def create_dataloader(
+    start: str, end: str, freq: str, batch_size: int, shuffle: bool
+) -> data.DataLoader:
     dataset = energy_dataset.EnergyDataset(
         filepath_era5=cfg.ERA5_PATH,
         filepath_power=cfg.POWER_PATH,
@@ -92,7 +93,19 @@ def create_dataloader(start, end, freq, batch_size, shuffle):
     )
 
 
-def set_requires_grad(model, layer_name):
+def set_requires_grad(model: torch.nn.Module, layer_name: str) -> None:
+    """
+    Sets the `requires_grad` attribute of the parameters in the model.
+    This function will first set `requires_grad` to False for all parameters in the model.
+    Then, it will set `requires_grad` to True for all parameters whose names contain the specified `layer_name`.
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The neural network model whose parameters' `requires_grad` attribute will be modified.
+    layer_name : str
+        The name (or partial name) of the layer whose parameters should have `requires_grad` set to True.
+    """
+
     for param in model.parameters():
         param.requires_grad = False
 
@@ -102,21 +115,22 @@ def set_requires_grad(model, layer_name):
             print("Requires grad: ", name)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3_2"
-    )
-    parser.add_argument("--load_my_best", type=bool, default=True)
-    parser.add_argument("--launcher", default="pytorch", help="job launcher")
-    parser.add_argument("--local-rank", type=int, default=0)
-    parser.add_argument("--dist", default=False)
+def setup_writer(output_path):
+    writer_path = os.path.join(output_path, "writer")
+    if not os.path.exists(writer_path):
+        os.mkdir(writer_path)
+    writer = SummaryWriter(writer_path)
+    return writer
 
-    args = parser.parse_args()
-    starts = time.time()
 
-    PATH = cfg.PG_INPUT_PATH
+def setup_logger(type_net, horizon, output_path):
+    logger_name = type_net + str(horizon)
+    utils.logger_info(logger_name, os.path.join(output_path, logger_name + ".log"))
+    logger = logging.getLogger(logger_name)
+    return logger
 
+
+def main(args: argparse.Namespace) -> None:
     opt = {
         "gpu_ids": list(range(torch.cuda.device_count()))
     }  # Automatically select available GPUs
@@ -125,21 +139,14 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_list
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    print(f"Predicting on {device}")
-
     output_path = os.path.join(cfg.PG_OUT_PATH, args.type_net, str(cfg.PG.HORIZON))
     utils.mkdirs(output_path)
 
-    writer_path = os.path.join(output_path, "writer")
-    if not os.path.exists(writer_path):
-        os.mkdir(writer_path)
+    writer = setup_writer(output_path)
+    logger = setup_logger(args.type_net, cfg.PG.HORIZON, output_path)
 
-    writer = SummaryWriter(writer_path)
-
-    logger_name = args.type_net + str(cfg.PG.HORIZON)
-    utils.logger_info(logger_name, os.path.join(output_path, logger_name + ".log"))
-
-    logger = logging.getLogger(logger_name)
+    logger.info(f"Start finetuning {args.type_net} on energy dataset")
+    logger.info(f"Predicting on {device}")
 
     train_dataloader = create_dataloader(
         cfg.PG.TRAIN.START_TIME,
@@ -149,21 +156,21 @@ if __name__ == "__main__":
         True,
     )
     val_dataloader = create_dataloader(
-        cfg.VAL.START_TIME,
-        cfg.VAL.END_TIME,
+        cfg.PG.VAL.START_TIME,
+        cfg.PG.VAL.END_TIME,
         cfg.PG.VAL.FREQUENCY,
         cfg.PG.VAL.BATCH_SIZE,
         False,
     )
     test_dataloader = create_dataloader(
-        cfg.TEST.START_TIME,
-        cfg.TEST.END_TIME,
+        cfg.PG.TEST.START_TIME,
+        cfg.PG.TEST.END_TIME,
         cfg.PG.TEST.FREQUENCY,
         cfg.PG.TEST.BATCH_SIZE,
         False,
     )
 
-    model = setup_model("PanguPowerConv")
+    model = setup_model("PanguPowerConv", device)
 
     optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -180,7 +187,7 @@ if __name__ == "__main__":
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=[25, 50], gamma=0.5
     )
-    start_epoch = 1
+    start_epoch = 7
 
     model = train(
         model,
@@ -208,4 +215,16 @@ if __name__ == "__main__":
         device=device,
         res_path=output_path,
     )
-    # CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -m torch.distributed.launch --nproc_per_node=4 --master_port=1234 finetune_lastLayer_ddp.py --dist True
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3_2"
+    )
+    parser.add_argument("--load_my_best", type=bool, default=True)
+    parser.add_argument("--launcher", default="pytorch", help="job launcher")
+    parser.add_argument("--local-rank", type=int, default=0)
+    parser.add_argument("--dist", default=False)
+    args = parser.parse_args()
+    main(args)
