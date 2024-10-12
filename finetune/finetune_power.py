@@ -58,12 +58,12 @@ def setup_model(type: str):
     elif type == "PanguPowerConv":
         model = PanguPowerConv(device=device).to(device)
         checkpoint = torch.load(
-            "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3/24/models/best_model.pth",
+            "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3/24/models/train_4.pth",
             map_location=device,
             weights_only=False,
         )
         print("Loaded pangu power conv model")
-        model.load_state_dict(checkpoint["model"], strict=True)
+        model.load_state_dict(checkpoint["model"])
 
         # Only finetune the last layer
         set_requires_grad(model, "_conv_power_layers")
@@ -124,11 +124,11 @@ if __name__ == "__main__":
     logger = logging.getLogger(logger_name)
 
     train_dataset = energy_dataset.EnergyDataset(
-        filepath_era5="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
-        filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
-        startDate="20170101",
-        endDate="20171231",
-        freq="6h",
+        filepath_era5=cfg.ERA5_PATH,
+        filepath_power=cfg.POWER_PATH,
+        startDate=cfg.PG.TRAIN.START_TIME,
+        endDate=cfg.PG.TRAIN.END_TIME,
+        freq=cfg.PG.TRAIN.FREQUENCY,
     )
 
     train_dataloader = data.DataLoader(
@@ -144,11 +144,11 @@ if __name__ == "__main__":
     print("dataset_length", dataset_length)
 
     val_dataset = energy_dataset.EnergyDataset(
-        filepath_era5="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
-        filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
-        startDate="20180101",
-        endDate="20180228",
-        freq="6h",
+        filepath_era5=cfg.ERA5_PATH,
+        filepath_power=cfg.POWER_PATH,
+        startDate=cfg.VAL.START_TIME,
+        endDate=cfg.VAL.END_TIME,
+        freq=cfg.PG.VAL.FREQUENCY,
     )
 
     val_dataloader = data.DataLoader(
@@ -161,11 +161,11 @@ if __name__ == "__main__":
     )
 
     test_dataset = energy_dataset.EnergyDataset(
-        filepath_era5="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr",
-        filepath_power="/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr",
-        startDate="20180301",
-        endDate="20180430",
-        freq="6h",
+        filepath_era5=cfg.ERA5_PATH,
+        filepath_power=cfg.POWER_PATH,
+        startDate=cfg.TEST.START_TIME,
+        endDate=cfg.TEST.END_TIME,
+        freq=cfg.PG.TEST.FREQUENCY,
     )
 
     test_dataloader = data.DataLoader(

@@ -25,6 +25,9 @@ assert __C.PG_OUT_PATH is not None
 
 
 __C.ERA5_PATH = "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/ec.era5/1959-2023_01_10-wb13-6h-1440x721.zarr"
+__C.POWER_PATH = (
+    "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/offshore.zarr"
+)
 # Land sea mask path
 __C.LSM_PATH = (
     "/lsdf/kit/imk-tro/projects/Gruppe_Quinting/om1434/offshore/lsm_global.zarr"
@@ -49,40 +52,34 @@ __C.ERA5_SURFACE_VARIABLES = ["msl", "u10", "v10", "t2m"]
 __C.ERA5_UPPER_VARIABLES = ["z", "q", "t", "u", "v"]
 
 __C.PG = ConfigNamespace()
-
-__C.PG.TRAIN = ConfigNamespace()
-
-__C.PG.HORIZON = 24
-
+__C.PG.HORIZON = 24  # Forecast horizon
 # Use land sea mask when calculating loss (set for all: train, val, test)
 __C.PG.USE_LSM = True
 
-
+__C.PG.TRAIN = ConfigNamespace()
 __C.PG.TRAIN.EPOCHS = 100
 __C.PG.TRAIN.LR = 1e-3  # 5e-6  # 5e-4
 __C.PG.TRAIN.WEIGHT_DECAY = 1e-4  # 3e-6
-__C.PG.TRAIN.START_TIME = "20150101"
-__C.PG.TRAIN.END_TIME = "20171231"  # '20171231'
-__C.PG.TRAIN.FREQUENCY = "12h"
-__C.PG.TRAIN.BATCH_SIZE = 4
+__C.PG.TRAIN.START_TIME = "20160101"
+__C.PG.TRAIN.END_TIME = "20161231"
+__C.PG.TRAIN.FREQUENCY = "6h"
+__C.PG.TRAIN.BATCH_SIZE = 1
 __C.PG.TRAIN.UPPER_WEIGHTS = [3.00, 0.60, 1.50, 0.77, 0.54]
 __C.PG.TRAIN.SURFACE_WEIGHTS = [1.50, 0.77, 0.66, 3.00]
 __C.PG.TRAIN.SAVE_INTERVAL = 3
 __C.PG.TRAIN.USE_LSM = __C.PG.USE_LSM
 
 __C.PG.VAL = ConfigNamespace()
-
-__C.PG.VAL.START_TIME = "20180101"
-__C.PG.VAL.END_TIME = "20181231"
+__C.PG.VAL.START_TIME = "20170101"
+__C.PG.VAL.END_TIME = "20171231"
 __C.PG.VAL.FREQUENCY = "24h"
 __C.PG.VAL.BATCH_SIZE = 1
 __C.PG.VAL.INTERVAL = 1
 __C.PG.VAL.USE_LSM = __C.PG.USE_LSM
 
 __C.PG.TEST = ConfigNamespace()
-
-__C.PG.TEST.START_TIME = "20190101"
-__C.PG.TEST.END_TIME = "20191231"
+__C.PG.TEST.START_TIME = "20180101"
+__C.PG.TEST.END_TIME = "20181231"
 __C.PG.TEST.FREQUENCY = "24h"
 __C.PG.TEST.BATCH_SIZE = 1
 __C.PG.TEST.USE_LSM = __C.PG.USE_LSM
