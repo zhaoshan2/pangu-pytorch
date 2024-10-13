@@ -373,6 +373,14 @@ def test(test_loader, model, device, res_path):
             path=png_path,
         )
 
+        utils.visualize_windspeed(
+            output_surface_test.detach().cpu().squeeze(),
+            target_surface_test.detach().cpu().squeeze(),
+            input_surface_test.detach().cpu().squeeze(),
+            step=target_time,
+            path=png_path,
+        )
+
         # Compute test scores
         # rmse
         output_test = output_test.squeeze()
