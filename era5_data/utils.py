@@ -122,6 +122,44 @@ def visuailze_surface(output, target, input, var, step, path):
     plt.close()
 
 
+def visualize_windspeed(output, target, input, step, path):
+    variables = cfg.ERA5_SURFACE_VARIABLES
+    var1 = variables.index("u10")
+    var2 = variables.index("v10")
+    wind_speed_input = torch.sqrt(input[var1, :, :] ** 2 + input[var2, :, :] ** 2)
+    wind_speed_output = torch.sqrt(output[var1, :, :] ** 2 + output[var2, :, :] ** 2)
+    wind_speed_target = torch.sqrt(target[var1, :, :] ** 2 + target[var2, :, :] ** 2)
+
+    fig = plt.figure(figsize=(16, 2))
+    ax1 = fig.add_subplot(143)
+    # ? to do?
+    # levels = np.linspace(93000, 105000, 9)
+    plot1 = ax1.imshow(
+        wind_speed_output, cmap="RdBu"
+    )  # , levels = levels, extend = 'min')
+    plt.colorbar(plot1, ax=ax1, fraction=0.05, pad=0.05)
+    ax1.title.set_text("pred")
+
+    ax2 = fig.add_subplot(142)
+    plot2 = ax2.imshow(wind_speed_target, cmap="RdBu")
+    plt.colorbar(plot2, ax=ax2, fraction=0.05, pad=0.05)
+    ax2.title.set_text("gt")
+
+    ax3 = fig.add_subplot(141)
+    plot3 = ax3.imshow(wind_speed_input, cmap="RdBu")
+    plt.colorbar(plot3, ax=ax3, fraction=0.05, pad=0.05)
+    ax3.title.set_text("input")
+
+    ax4 = fig.add_subplot(144)
+    plot4 = ax4.imshow(wind_speed_output - wind_speed_target, cmap="RdBu")
+    plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
+    ax4.title.set_text("bias")
+
+    plt.tight_layout()
+    plt.savefig(fname=os.path.join(path, "{}_{}".format(step, "wind_speed")))
+    plt.close()
+
+
 def visuailze_power(output, target, input, step, path):
     print("step", step)
     variables = cfg.ERA5_SURFACE_VARIABLES
