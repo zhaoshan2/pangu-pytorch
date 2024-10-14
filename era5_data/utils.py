@@ -167,7 +167,6 @@ def visualize_windspeed(output, target, input, step, path):
 
 
 def visuailze_power(output, target, input, step, path):
-    print("step", step)
     variables = cfg.ERA5_SURFACE_VARIABLES
     var1 = variables.index("u10")
     var2 = variables.index("v10")
