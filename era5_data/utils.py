@@ -126,11 +126,17 @@ def visualize_windspeed(output, target, input, step, path):
     variables = cfg.ERA5_SURFACE_VARIABLES
     var1 = variables.index("u10")
     var2 = variables.index("v10")
-    wind_speed_input = torch.sqrt(input[var1, :, :] ** 2 + input[var2, :, :] ** 2)
-    wind_speed_output = torch.sqrt(output[var1, :, :] ** 2 + output[var2, :, :] ** 2)
-    wind_speed_target = torch.sqrt(target[var1, :, :] ** 2 + target[var2, :, :] ** 2)
 
-    fig = plt.figure(figsize=(16, 2))
+    wind_speed_input = torch.sqrt(input[var1, :, :] ** 2 + input[var2, :, :] ** 2)
+    wind_speed_input = prepare_europe(wind_speed_input)
+
+    wind_speed_output = torch.sqrt(output[var1, :, :] ** 2 + output[var2, :, :] ** 2)
+    wind_speed_output = prepare_europe(wind_speed_output)
+
+    wind_speed_target = torch.sqrt(target[var1, :, :] ** 2 + target[var2, :, :] ** 2)
+    wind_speed_target = prepare_europe(wind_speed_target)
+
+    fig = plt.figure(figsize=(12, 2))
     ax1 = fig.add_subplot(143)
     # ? to do?
     # levels = np.linspace(93000, 105000, 9)
