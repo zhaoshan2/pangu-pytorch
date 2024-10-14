@@ -226,9 +226,8 @@ def visuailze_all(
     output_power,
     target_power,
     input,
-    output_pangu,
     output_pangu_surface,
-    target_pangu,
+    target_pangu_surface,
     step,
     path,
 ):
@@ -238,7 +237,9 @@ def visuailze_all(
     var2 = variables.index("v10")
 
     input_ws = _calc_wind_speed(input[var1, :, :], input[var2, :, :])
-    target_ws = _calc_wind_speed(target_pangu[var1, :, :], target_pangu[var2, :, :])
+    target_ws = _calc_wind_speed(
+        target_pangu_surface[var1, :, :], target_pangu_surface[var2, :, :]
+    )
     output_ws = _calc_wind_speed(
         output_pangu_surface[var1, :, :], output_pangu_surface[var2, :, :]
     )
