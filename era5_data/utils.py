@@ -64,6 +64,8 @@ def visuailze(output, target, input, var, z, step, path):
     fig = plt.figure(figsize=(16, 2))
     ax1 = fig.add_subplot(143)
 
+    max_bias = _calc_max_bias(output[var, z, :, :], target[var, z, :, :])
+
     plot1 = ax1.imshow(
         output[var, z, :, :], cmap="RdBu"
     )  # , levels = levels, extend = 'min')
@@ -81,7 +83,12 @@ def visuailze(output, target, input, var, z, step, path):
     ax3.title.set_text("input")
 
     ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(output[var, z, :, :] - target[var, z, :, :], cmap="RdBu")
+    plot4 = ax4.imshow(
+        output[var, z, :, :] - target[var, z, :, :],
+        cmap="RdBu",
+        vmin=-max_bias,
+        vmax=max_bias,
+    )
     plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
     ax4.title.set_text("bias")
 
@@ -94,8 +101,9 @@ def visuailze_surface(output, target, input, var, step, path):
     var = variables.index(var)
     fig = plt.figure(figsize=(16, 2))
     ax1 = fig.add_subplot(143)
-    # ? to do?
-    # levels = np.linspace(93000, 105000, 9)
+
+    max_bias = _calc_max_bias(output[var, :, :], target[var, :, :])
+
     plot1 = ax1.imshow(
         output[var, :, :], cmap="RdBu"
     )  # , levels = levels, extend = 'min')
@@ -113,7 +121,12 @@ def visuailze_surface(output, target, input, var, step, path):
     ax3.title.set_text("input")
 
     ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(output[var, :, :] - target[var, :, :], cmap="RdBu")
+    plot4 = ax4.imshow(
+        output[var, :, :] - target[var, :, :],
+        cmap="RdBu",
+        vmin=-max_bias,
+        vmax=max_bias,
+    )
     plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
     ax4.title.set_text("bias")
 
@@ -136,6 +149,8 @@ def visualize_windspeed(output, target, input, step, path):
     wind_speed_target = torch.sqrt(target[var1, :, :] ** 2 + target[var2, :, :] ** 2)
     wind_speed_target = prepare_europe(wind_speed_target)
 
+    max_bias = _calc_max_bias(wind_speed_output, wind_speed_target)
+
     fig = plt.figure(figsize=(12, 2))
     ax1 = fig.add_subplot(143)
     # ? to do?
@@ -157,7 +172,12 @@ def visualize_windspeed(output, target, input, step, path):
     ax3.title.set_text("input")
 
     ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(wind_speed_output - wind_speed_target, cmap="RdBu")
+    plot4 = ax4.imshow(
+        wind_speed_output - wind_speed_target,
+        cmap="RdBu",
+        vmin=-max_bias,
+        vmax=max_bias,
+    )
     plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
     ax4.title.set_text("bias")
 
@@ -175,6 +195,9 @@ def visuailze_power(output, target, input, step, path):
     wind_speed = prepare_europe(wind_speed)
     output = prepare_europe(output)
     target = prepare_europe(target)
+
+    # Calculate bias and max bias for color scale
+    max_bias = _calc_max_bias(output, target)
 
     fig = plt.figure(figsize=(12, 2))
 
@@ -194,13 +217,21 @@ def visuailze_power(output, target, input, step, path):
     ax1.title.set_text("pred")
 
     ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(output - target, cmap="RdBu")
+    plot4 = ax4.imshow(output - target, cmap="RdBu", vmin=-max_bias, vmax=max_bias)
     plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
     ax4.title.set_text("bias")
 
     plt.tight_layout()
     plt.savefig(fname=os.path.join(path, "{}_power".format(step)))
     plt.close()
+
+
+def _calc_max_bias(output, target):
+    """Calculate the maximum bias between the output and target. Used for bias color scale"""
+    bias = output - target
+    bias_masked = bias[~torch.isnan(bias)]
+    max_bias = torch.max(bias_masked).item()
+    return max_bias
 
 
 def mkdir(path):
