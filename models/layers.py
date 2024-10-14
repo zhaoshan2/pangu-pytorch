@@ -802,61 +802,6 @@ class PatchRecovery_pretrain(nn.Module):
         return output, output_surface
 
 
-class PatchRecoveryPower(nn.Module):
-    """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440])"""
-
-    def __init__(self, dim):
-        super().__init__()
-        """Patch recovery operation for wind power generation"""
-        # Use transposed convolution to recover data
-        self.patch_size = (2, 4, 4)
-        self.dim = dim
-
-        # A single conv layer to recover both atmospheric and surface data together
-        self.conv = nn.Conv1d(in_channels=dim, out_channels=4, kernel_size=1, stride=1)
-
-    def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
-        # Reshape x back to three dimensions
-        x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
-
-        x = x.view(
-            x.shape[0], x.shape[1], Z, H, W
-        )  # Reshape to (batch, channels, Z, H, W) [1, 384, 8, 181, 360]
-
-        # Use both atmospheric and surface levels
-        output = x.view(
-            x.shape[0], x.shape[1], -1
-        )  # Flatten spatial dimensions [1, 384, 521280]
-
-        # Apply the convolution to recover the final output shape [1, 721, 1440]
-        output = self.conv(output)  # [1, 2, 521280]
-
-        output = output.reshape(
-            output.shape[0],
-            1,
-            self.patch_size[0],
-            self.patch_size[1],
-            self.patch_size[2],
-            Z - 1,
-            H,
-            W,
-        )
-        # TODO(EliasKng): Reshape & Permute Line 739 & co.
-
-        # Reshape to the desired output shape
-        output = output.view(
-            output.shape[0], 1, 724, 1440
-        )  # [batch, 1 variable, H, W] [1, 1, 724, 1440]
-
-        # Crop the output to remove padding and fit the [1, 721, 1440] shape
-        height_slice = slice(0, output.shape[-2] - 3)  # Remove padding on height
-        output = output[
-            :, :, height_slice, :
-        ]  # Final shape [batch, 1, 721, 1440] [1, 1, 721, 1440]
-
-        return output
-
-
 class PatchRecoveryPowerSurface(nn.Module):
     """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440]).
     Processing both surface and atmospheric in one step (with one convolution) is not done, since for atmospheric variables
@@ -898,6 +843,65 @@ class PatchRecoveryPowerSurface(nn.Module):
         output = output.view(output.shape[0], 1, 1, 721, 1440)  # [1, 1, 1, 721, 1440]
         # output_surface = output_surface * self.surface_std + self.surface_mean
         output = output.view(output.shape[0], 1, 721, 1440)  # [1, 1, 721, 1440]
+        return output
+
+
+class PatchRecoveryUpper(nn.Module):
+    """Patch recovery operation for wind power generation based on upper atmospheric variables.
+    This class processes only the atmospheric data (excluding surface data) to predict wind capacity.
+    Output dimensions: [1, 721, 1440], similar to the surface-level recovery.
+    """
+
+    def __init__(self, dim):
+        super().__init__()
+        """Patch recovery operation"""
+        self.patch_size = (2, 4, 4)
+        self.dim = dim  # 384
+        # Receive 384 input images, project down to 32 output images
+        self.conv = nn.Conv1d(in_channels=dim, out_channels=32, kernel_size=1, stride=1)
+
+    def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
+        # Reshape x back to three dimensions
+        x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
+        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # [1, 384, 8, 181, 360]
+
+        # Slice out upper atmospheric data (exclude surface level)
+        output = x[:, :, 1:, :, :]  # [1, 384, 7, 181, 360]
+
+        # Flatten the output
+        output = output.view(output.shape[0], self.dim, -1)  # [1, 384, 456120]
+
+        # Apply convolution
+        output = self.conv(output)  # [1, 32, 456120]
+
+        # Recover [724, 1440] shape
+        output = output.view(
+            output.shape[0],
+            1,
+            self.patch_size[0],
+            self.patch_size[1],
+            self.patch_size[2],
+            Z - 1,
+            H,
+            W,
+        )  # [1, 1, 2, 4, 4, 7, 181, 360]
+        output = torch.permute(
+            output, (0, 1, 5, 2, 6, 3, 7, 4)
+        )  # [1, 1, 7, 2, 181, 4, 360, 4]
+        output = output.reshape(
+            output.shape[0], 1, 14, 724, 1440
+        )  # [1, 1, 14, 724, 1440]
+
+        # Remove padding
+        depth_slice = slice(0, output.shape[-3] - 1)
+        height_slice = slice(0, output.shape[-2] - 3)
+        output = output[:, :, depth_slice, height_slice, :]  # [1, 1, 13, 721, 1440]
+
+        # Reshape to the final output
+        output = output.view(output.shape[0], 1, 13, 721, 1440)  # [1, 1, 13, 721, 1440]
+        # TODO(EliasKng): Fix error: Number of elements should stay the same
+        output = output.view(output.shape[0], 1, 721, 1440)  # [1, 1, 721, 1440]
+
         return output
 
 
@@ -990,3 +994,25 @@ class PowerConvWithSigmoid(PowerConv):
             raise ValueError(
                 "The last layer is not a ReLU layer and cannot be replaced with Sigmoid."
             )
+
+
+if __name__ == "__main__":
+    # Dimensions for the input tensor
+    batch_size = 1
+    total_elements = 521280  # 384 * 8 * 181 * 360 flattened
+    dim = 384  # Input dimension (number of channels)
+    Z = 8  # Number of vertical levels (pressure levels)
+    H = 181  # Height (latitude)
+    W = 360  # Width (longitude)
+
+    # Create a random input tensor with shape [1, 521280, 384]
+    input_tensor = torch.randn(batch_size, total_elements, dim)
+
+    # Initialize the PatchRecoveryUpper class
+    model = PatchRecoveryUpper(dim=dim)
+
+    # Forward pass through the model
+    output = model(input_tensor, Z, H, W)
+
+    # Print the output shape to verify the result
+    print("Output shape:", output.shape)  # Expected shape: [1, 1, 721, 1440]
