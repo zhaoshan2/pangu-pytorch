@@ -6,7 +6,7 @@ sys.path.append("/hkfs/home/project/hk-project-test-mlperf/om1434/masterarbeit")
 from wind_fusion import energy_dataset
 from era5_data import utils
 from era5_data.config import cfg
-from models.pangu_power import PanguPowerPatchRecovery
+from models.pangu_power import PanguPowerConv
 import os
 import torch
 import os
@@ -21,9 +21,7 @@ if __name__ == "__main__":
     check pg-power model performance
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--type_net", type=str, default="finetune_power_1010_output_mask"
-    )
+    parser.add_argument("--type_net", type=str, default="testestest")
     args = parser.parse_args()
     starts = time.time()
 
@@ -59,10 +57,10 @@ if __name__ == "__main__":
 
     torch.set_num_threads(16)
 
-    model = PanguPowerPatchRecovery(device=device).to(device)
+    model = PanguPowerConv(device=device).to(device)
 
     checkpoint = torch.load(
-        "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/finetune_power_1010_output_mask/24/models/train_21.pth",
+        "/home/hk-project-test-mlperf/om1434/masterarbeit/wind_fusion/pangu_pytorch/result/PanguPowerConv_64_128_64_1_k3_2/24/models/train_10.pth",
         map_location=device,
         weights_only=False,
     )

@@ -6,6 +6,7 @@ from datetime import datetime
 import warnings
 from era5_data import utils, utils_data
 from era5_data.config import cfg
+from typing import Tuple, Dict
 
 warnings.filterwarnings(
     "ignore",
@@ -23,14 +24,26 @@ def load_land_sea_mask(device, mask_type="sea", fill_value=0):
     )
 
 
-def model_inference(model, input, input_surface, aux_constants):
-    return model(
+def model_inference(
+    model: nn.Module,
+    input: torch.Tensor,
+    input_surface: torch.Tensor,
+    aux_constants: Dict[str, torch.Tensor],
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    output_power, output_surface = model(
         input,
         input_surface,
         aux_constants["weather_statistics"],
         aux_constants["constant_maps"],
         aux_constants["const_h"],
     )
+
+    # Transfer to the output to the original data range
+    output_surface = utils_data.normBackDataSurface(
+        output_surface, aux_constants["weather_statistics_last"]
+    )
+
+    return output_power, output_surface
 
 
 def calculate_loss(output, target, criterion, lsm_expanded):
@@ -41,11 +54,21 @@ def calculate_loss(output, target, criterion, lsm_expanded):
     return torch.mean(loss)
 
 
-def visualize(output, target, input, step, path):
-    utils.visuailze_power(
-        output.detach().cpu().squeeze(),
-        target.detach().cpu().squeeze(),
-        input.detach().cpu().squeeze(),
+def visualize(
+    output_power,
+    target_power,
+    input_surface,
+    output_surface,
+    target_surface,
+    step,
+    path,
+):
+    utils.visuailze_all(
+        output_power.detach().cpu().squeeze(),
+        target_power.detach().cpu().squeeze(),
+        input_surface.detach().cpu().squeeze(),
+        output_surface.detach().cpu().squeeze(),
+        target_surface.detach().cpu().squeeze(),
         step=step,
         path=path,
     )
@@ -86,19 +109,28 @@ def train(
         print(f"Starting epoch {i}/{epochs}")
 
         for id, train_data in enumerate(train_loader):
-            input, input_surface, target, periods = train_data
-            input, input_surface, target = (
+            (
+                input,
+                input_surface,
+                target_power,
+                target_upper,
+                target_surface,
+                periods,
+            ) = train_data
+            input, input_surface, target_power = (
                 input.to(device),
                 input_surface.to(device),
-                target.to(device),
+                target_power.to(device),
             )
             print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
 
             optimizer.zero_grad()
             model.train()
-            output = model_inference(model, input, input_surface, aux_constants)
-            lsm_expanded = load_land_sea_mask(output.device)
-            loss = calculate_loss(output, target, criterion, lsm_expanded)
+            output_power, output_surface = model_inference(
+                model, input, input_surface, aux_constants
+            )
+            lsm_expanded = load_land_sea_mask(output_power.device)
+            loss = calculate_loss(output_power, target_power, criterion, lsm_expanded)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
@@ -131,19 +163,26 @@ def train(
                 model.eval()
                 val_loss = 0.0
                 for id, val_data in enumerate(val_loader, 0):
-                    input_val, input_surface_val, target_val, periods_val = val_data
-                    input_val, input_surface_val, target_val = (
+                    (
+                        input_val,
+                        input_surface_val,
+                        target_power_val,
+                        target_upper_val,
+                        target_surface_val,
+                        periods_val,
+                    ) = val_data
+                    input_val, input_surface_val, target_power_val = (
                         input_val.to(device),
                         input_surface_val.to(device),
-                        target_val.to(device),
+                        target_power_val.to(device),
                     )
                     print(f"(V) Processing batch {id + 1}/{len(val_loader)}")
-                    output_val = model_inference(
+                    output_power_val, output_surface_val = model_inference(
                         model, input_val, input_surface_val, aux_constants
                     )
-                    lsm_expanded = load_land_sea_mask(output_val.device)
+                    lsm_expanded = load_land_sea_mask(output_power_val.device)
                     loss = calculate_loss(
-                        output_val, target_val, criterion, lsm_expanded
+                        output_power_val, target_power_val, criterion, lsm_expanded
                     )
                     val_loss += loss.item()
 
@@ -153,7 +192,15 @@ def train(
                 logger.info("Validate at Epoch {} : {:.3f}".format(i, val_loss))
                 png_path = os.path.join(res_path, "png_training")
                 utils.mkdirs(png_path)
-                visualize(output_val, target_val, input_surface_val, i, png_path)
+                visualize(
+                    output_power_val,
+                    target_power_val,
+                    input_surface_val,
+                    output_surface_val,
+                    target_surface_val,
+                    i,
+                    png_path,
+                )
 
                 if val_loss < best_loss:
                     best_loss = val_loss
@@ -185,22 +232,38 @@ def test(test_loader, model, device, res_path):
     for id, data in enumerate(test_loader, 0):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}] predict on {id}")
-        input_test, input_surface_test, target_test, periods_test = data
-        input_test, input_surface_test, target_test = (
+        (
+            input_test,
+            input_surface_test,
+            target_power_test,
+            target_upper_test,
+            target_surface_test,
+            periods_test,
+        ) = data
+
+        input_test, input_surface_test, target_power_test = (
             input_test.to(device),
             input_surface_test.to(device),
-            target_test.to(device),
+            target_power_test.to(device),
         )
         model.eval()
-        output_test = model_inference(
+        output_power_test, output_surface_test = model_inference(
             model, input_test, input_surface_test, aux_constants
         )
-        lsm_expanded = load_land_sea_mask(output_test.device)
-        output_test = output_test * lsm_expanded
+        lsm_expanded = load_land_sea_mask(output_power_test.device)
+        output_power_test = output_power_test * lsm_expanded
         target_time = periods_test[1][0]
         png_path = os.path.join(res_path, "png")
         utils.mkdirs(png_path)
-        visualize(output_test, target_test, input_surface_test, target_time, png_path)
+        visualize(
+            output_power_test,
+            target_power_test,
+            input_surface_test,
+            output_surface_test,
+            target_surface_test,
+            target_time,
+            png_path,
+        )
 
 
 if __name__ == "__main__":

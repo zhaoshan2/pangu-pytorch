@@ -62,28 +62,35 @@ def visuailze(output, target, input, var, z, step, path):
     variables = cfg.ERA5_UPPER_VARIABLES
     var = variables.index(var)
     fig = plt.figure(figsize=(16, 2))
-    ax1 = fig.add_subplot(143)
 
-    plot1 = ax1.imshow(
+    max_bias = _calc_max_bias(output[var, z, :, :], target[var, z, :, :])
+
+    ax_1 = fig.add_subplot(141)
+    plot3 = ax_1.imshow(input[var, z, :, :], cmap="RdBu")
+    plt.colorbar(plot3, ax=ax_1, fraction=0.05, pad=0.05)
+    ax_1.title.set_text("input")
+
+    ax_2 = fig.add_subplot(142)
+    plot2 = ax_2.imshow(target[var, z, :, :], cmap="RdBu")
+    plt.colorbar(plot2, ax=ax_2, fraction=0.05, pad=0.05)
+    ax_2.title.set_text("gt")
+
+    ax_3 = fig.add_subplot(143)
+    plot1 = ax_3.imshow(
         output[var, z, :, :], cmap="RdBu"
     )  # , levels = levels, extend = 'min')
-    plt.colorbar(plot1, ax=ax1, fraction=0.05, pad=0.05)
-    ax1.title.set_text("pred")
+    plt.colorbar(plot1, ax=ax_3, fraction=0.05, pad=0.05)
+    ax_3.title.set_text("pred")
 
-    ax2 = fig.add_subplot(142)
-    plot2 = ax2.imshow(target[var, z, :, :], cmap="RdBu")
-    plt.colorbar(plot2, ax=ax2, fraction=0.05, pad=0.05)
-    ax2.title.set_text("gt")
-
-    ax3 = fig.add_subplot(141)
-    plot3 = ax3.imshow(input[var, z, :, :], cmap="RdBu")
-    plt.colorbar(plot3, ax=ax3, fraction=0.05, pad=0.05)
-    ax3.title.set_text("input")
-
-    ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(output[var, z, :, :] - target[var, z, :, :], cmap="RdBu")
-    plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
-    ax4.title.set_text("bias")
+    ax_4 = fig.add_subplot(144)
+    plot4 = ax_4.imshow(
+        output[var, z, :, :] - target[var, z, :, :],
+        cmap="RdBu",
+        vmin=-max_bias,
+        vmax=max_bias,
+    )
+    plt.colorbar(plot4, ax=ax_4, fraction=0.05, pad=0.05)
+    ax_4.title.set_text("bias")
 
     plt.tight_layout()
     plt.savefig(fname=os.path.join(path, "{}_{}_Z{}".format(step, variables[var], z)))
@@ -93,29 +100,35 @@ def visuailze_surface(output, target, input, var, step, path):
     variables = cfg.ERA5_SURFACE_VARIABLES
     var = variables.index(var)
     fig = plt.figure(figsize=(16, 2))
-    ax1 = fig.add_subplot(143)
-    # ? to do?
-    # levels = np.linspace(93000, 105000, 9)
-    plot1 = ax1.imshow(
+
+    max_bias = _calc_max_bias(output[var, :, :], target[var, :, :])
+
+    ax_1 = fig.add_subplot(141)
+    plot3 = ax_1.imshow(input[var, :, :], cmap="RdBu")
+    plt.colorbar(plot3, ax=ax_1, fraction=0.05, pad=0.05)
+    ax_1.title.set_text("input")
+
+    ax_2 = fig.add_subplot(142)
+    plot2 = ax_2.imshow(target[var, :, :], cmap="RdBu")
+    plt.colorbar(plot2, ax=ax_2, fraction=0.05, pad=0.05)
+    ax_2.title.set_text("gt")
+
+    ax_3 = fig.add_subplot(143)
+    plot1 = ax_3.imshow(
         output[var, :, :], cmap="RdBu"
     )  # , levels = levels, extend = 'min')
-    plt.colorbar(plot1, ax=ax1, fraction=0.05, pad=0.05)
-    ax1.title.set_text("pred")
+    plt.colorbar(plot1, ax=ax_3, fraction=0.05, pad=0.05)
+    ax_3.title.set_text("pred")
 
-    ax2 = fig.add_subplot(142)
-    plot2 = ax2.imshow(target[var, :, :], cmap="RdBu")
-    plt.colorbar(plot2, ax=ax2, fraction=0.05, pad=0.05)
-    ax2.title.set_text("gt")
-
-    ax3 = fig.add_subplot(141)
-    plot3 = ax3.imshow(input[var, :, :], cmap="RdBu")
-    plt.colorbar(plot3, ax=ax3, fraction=0.05, pad=0.05)
-    ax3.title.set_text("input")
-
-    ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(output[var, :, :] - target[var, :, :], cmap="RdBu")
-    plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
-    ax4.title.set_text("bias")
+    ax_4 = fig.add_subplot(144)
+    plot4 = ax_4.imshow(
+        output[var, :, :] - target[var, :, :],
+        cmap="RdBu",
+        vmin=-max_bias,
+        vmax=max_bias,
+    )
+    plt.colorbar(plot4, ax=ax_4, fraction=0.05, pad=0.05)
+    ax_4.title.set_text("bias")
 
     plt.tight_layout()
     plt.savefig(fname=os.path.join(path, "{}_{}".format(step, variables[var])))
@@ -126,34 +139,44 @@ def visualize_windspeed(output, target, input, step, path):
     variables = cfg.ERA5_SURFACE_VARIABLES
     var1 = variables.index("u10")
     var2 = variables.index("v10")
+
     wind_speed_input = torch.sqrt(input[var1, :, :] ** 2 + input[var2, :, :] ** 2)
+    wind_speed_input = prepare_europe(wind_speed_input)
+
     wind_speed_output = torch.sqrt(output[var1, :, :] ** 2 + output[var2, :, :] ** 2)
+    wind_speed_output = prepare_europe(wind_speed_output)
+
     wind_speed_target = torch.sqrt(target[var1, :, :] ** 2 + target[var2, :, :] ** 2)
+    wind_speed_target = prepare_europe(wind_speed_target)
 
-    fig = plt.figure(figsize=(16, 2))
-    ax1 = fig.add_subplot(143)
-    # ? to do?
-    # levels = np.linspace(93000, 105000, 9)
-    plot1 = ax1.imshow(
-        wind_speed_output, cmap="RdBu"
-    )  # , levels = levels, extend = 'min')
-    plt.colorbar(plot1, ax=ax1, fraction=0.05, pad=0.05)
-    ax1.title.set_text("pred")
+    max_bias = _calc_max_bias(wind_speed_output, wind_speed_target)
 
-    ax2 = fig.add_subplot(142)
-    plot2 = ax2.imshow(wind_speed_target, cmap="RdBu")
-    plt.colorbar(plot2, ax=ax2, fraction=0.05, pad=0.05)
-    ax2.title.set_text("gt")
+    fig = plt.figure(figsize=(12, 2))
 
-    ax3 = fig.add_subplot(141)
-    plot3 = ax3.imshow(wind_speed_input, cmap="RdBu")
-    plt.colorbar(plot3, ax=ax3, fraction=0.05, pad=0.05)
-    ax3.title.set_text("input")
+    ax_1 = fig.add_subplot(141)
+    plot3 = ax_1.imshow(wind_speed_input, cmap="RdBu")
+    plt.colorbar(plot3, ax=ax_1, fraction=0.05, pad=0.05)
+    ax_1.title.set_text("input")
 
-    ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(wind_speed_output - wind_speed_target, cmap="RdBu")
-    plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
-    ax4.title.set_text("bias")
+    ax_2 = fig.add_subplot(142)
+    plot2 = ax_2.imshow(wind_speed_target, cmap="RdBu")
+    plt.colorbar(plot2, ax=ax_2, fraction=0.05, pad=0.05)
+    ax_2.title.set_text("gt (Δ 24h)")
+
+    ax_3 = fig.add_subplot(143)
+    plot1 = ax_3.imshow(wind_speed_output, cmap="RdBu")
+    plt.colorbar(plot1, ax=ax_3, fraction=0.05, pad=0.05)
+    ax_3.title.set_text("pred (Δ 24h)")
+
+    ax_4 = fig.add_subplot(144)
+    plot4 = ax_4.imshow(
+        wind_speed_output - wind_speed_target,
+        cmap="RdBu",
+        vmin=-max_bias,
+        vmax=max_bias,
+    )
+    plt.colorbar(plot4, ax=ax_4, fraction=0.05, pad=0.05)
+    ax_4.title.set_text("bias")
 
     plt.tight_layout()
     plt.savefig(fname=os.path.join(path, "{}_{}".format(step, "wind_speed")))
@@ -161,7 +184,6 @@ def visualize_windspeed(output, target, input, step, path):
 
 
 def visuailze_power(output, target, input, step, path):
-    print("step", step)
     variables = cfg.ERA5_SURFACE_VARIABLES
     var1 = variables.index("u10")
     var2 = variables.index("v10")
@@ -171,31 +193,127 @@ def visuailze_power(output, target, input, step, path):
     output = prepare_europe(output)
     target = prepare_europe(target)
 
+    max_bias = _calc_max_bias(output, target)
+
     fig = plt.figure(figsize=(12, 2))
 
-    ax3 = fig.add_subplot(141)
-    plot3 = ax3.imshow(wind_speed, cmap="RdBu")
-    plt.colorbar(plot3, ax=ax3, fraction=0.05, pad=0.05)
-    ax3.title.set_text("input (wind speed)")
+    ax_1 = fig.add_subplot(141)
+    plot3 = ax_1.imshow(wind_speed, cmap="RdBu")
+    plt.colorbar(plot3, ax=ax_1, fraction=0.05, pad=0.05)
+    ax_1.title.set_text("input[wind speed]")
 
-    ax2 = fig.add_subplot(142)
-    plot2 = ax2.imshow(target, cmap="RdBu")
-    plt.colorbar(plot2, ax=ax2, fraction=0.05, pad=0.05)
-    ax2.title.set_text("gt")
+    ax_2 = fig.add_subplot(142)
+    plot2 = ax_2.imshow(target, cmap="RdBu")
+    plt.colorbar(plot2, ax=ax_2, fraction=0.05, pad=0.05)
+    ax_2.title.set_text("gt")
 
-    ax1 = fig.add_subplot(143)
-    plot1 = ax1.imshow(output, cmap="RdBu")  # , levels = levels, extend = 'min')
-    plt.colorbar(plot1, ax=ax1, fraction=0.05, pad=0.05)
-    ax1.title.set_text("pred")
+    ax_3 = fig.add_subplot(143)
+    plot1 = ax_3.imshow(output, cmap="RdBu")  # , levels = levels, extend = 'min')
+    plt.colorbar(plot1, ax=ax_3, fraction=0.05, pad=0.05)
+    ax_3.title.set_text("pred")
 
-    ax4 = fig.add_subplot(144)
-    plot4 = ax4.imshow(output - target, cmap="RdBu")
-    plt.colorbar(plot4, ax=ax4, fraction=0.05, pad=0.05)
-    ax4.title.set_text("bias")
+    ax_4 = fig.add_subplot(144)
+    plot4 = ax_4.imshow(output - target, cmap="RdBu", vmin=-max_bias, vmax=max_bias)
+    plt.colorbar(plot4, ax=ax_4, fraction=0.05, pad=0.05)
+    ax_4.title.set_text("bias")
 
     plt.tight_layout()
     plt.savefig(fname=os.path.join(path, "{}_power".format(step)))
     plt.close()
+
+
+def visuailze_all(
+    output_power,
+    target_power,
+    input,
+    output_pangu_surface,
+    target_pangu_surface,
+    step,
+    path,
+):
+    """Visualizes both wind_speeds (pangu) and power predictions."""
+    variables = cfg.ERA5_SURFACE_VARIABLES
+    var1 = variables.index("u10")
+    var2 = variables.index("v10")
+
+    input_ws = _calc_wind_speed(input[var1, :, :], input[var2, :, :])
+    target_ws = _calc_wind_speed(
+        target_pangu_surface[var1, :, :], target_pangu_surface[var2, :, :]
+    )
+    output_ws = _calc_wind_speed(
+        output_pangu_surface[var1, :, :], output_pangu_surface[var2, :, :]
+    )
+
+    input_ws = prepare_europe(input_ws)
+    target_ws = prepare_europe(target_ws)
+    output_ws = prepare_europe(output_ws)
+    target_power = prepare_europe(target_power)
+    output_power = prepare_europe(output_power)
+
+    max_bias_ws = _calc_max_bias(output_ws, target_ws)
+    max_bias_power = _calc_max_bias(output_power, target_power)
+
+    fig = plt.figure(figsize=(12, 4))
+
+    ax_1 = fig.add_subplot(241)
+    plot_1 = ax_1.imshow(input_ws, cmap="RdBu")
+    plt.colorbar(plot_1, ax=ax_1, fraction=0.05, pad=0.05)
+    ax_1.title.set_text("input[wind speed]")
+
+    ax_2 = fig.add_subplot(242)
+    plot_2 = ax_2.imshow(target_ws, cmap="RdBu")
+    plt.colorbar(plot_2, ax=ax_2, fraction=0.05, pad=0.05)
+    ax_2.title.set_text("gt wind speed")
+
+    ax_3 = fig.add_subplot(243)
+    plot_3 = ax_3.imshow(output_ws, cmap="RdBu")
+    plt.colorbar(plot_3, ax=ax_3, fraction=0.05, pad=0.05)
+    ax_3.title.set_text("pred wind speed")
+
+    ax_4 = fig.add_subplot(244)
+    plot_4 = ax_4.imshow(
+        output_ws - target_ws, cmap="RdBu", vmin=-max_bias_ws, vmax=max_bias_ws
+    )
+    plt.colorbar(plot_4, ax=ax_4, fraction=0.05, pad=0.05)
+    ax_4.title.set_text("bias wind speed")
+
+    ax_6 = fig.add_subplot(246)
+    plot_6 = ax_6.imshow(target_power, cmap="RdBu")
+    plt.colorbar(plot_6, ax=ax_6, fraction=0.05, pad=0.05)
+    ax_6.title.set_text("gt power")
+
+    ax_7 = fig.add_subplot(247)
+    plot_7 = ax_7.imshow(
+        output_power, cmap="RdBu"
+    )  # , levels = levels, extend = 'min')
+    plt.colorbar(plot_7, ax=ax_7, fraction=0.05, pad=0.05)
+    ax_7.title.set_text("pred power")
+
+    ax_8 = fig.add_subplot(248)
+    plot_8 = ax_8.imshow(
+        output_power - target_power,
+        cmap="RdBu",
+        vmin=-max_bias_power,
+        vmax=max_bias_power,
+    )
+    plt.colorbar(plot_8, ax=ax_8, fraction=0.05, pad=0.05)
+    ax_8.title.set_text("bias power")
+
+    plt.tight_layout()
+    plt.savefig(fname=os.path.join(path, "{}_power".format(step)))
+    plt.close()
+
+
+def _calc_max_bias(output, target):
+    """Calculate the maximum bias between the output and target. Used for bias color scale"""
+    bias = output - target
+    bias_masked = bias[~torch.isnan(bias)]
+    max_bias = torch.max(torch.abs(bias_masked)).item()
+    return max_bias
+
+
+def _calc_wind_speed(u, v):
+    return torch.sqrt(u**2 + v**2)
 
 
 def mkdir(path):

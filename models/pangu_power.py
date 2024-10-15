@@ -5,7 +5,12 @@ from torch import Tensor
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import torch
-from models.layers import PatchRecoveryPowerSurface, PowerConv, PowerConvWithSigmoid
+from models.layers import (
+    PatchRecoveryPowerSurface,
+    PatchRecovery_pretrain,
+    PowerConv,
+    PowerConvWithSigmoid,
+)
 from models.pangu_model import PanguModel
 
 
@@ -27,7 +32,8 @@ class PanguPowerPatchRecovery(PanguModel):
         )
 
         # Replace the output layer with PatchRecovery_transfer
-        self._output_layer = PatchRecoveryPowerSurface(dims[-2])  # dims[-2] = 384
+        self._output_weather_layer = PatchRecovery_pretrain(dims[-2])
+        self._output_power_layer = PatchRecoveryPowerSurface(dims[-2])  # dims[-2] = 384
 
     def forward(
         self,
@@ -36,7 +42,7 @@ class PanguPowerPatchRecovery(PanguModel):
         statistics: Tensor,
         maps: Tensor,
         const_h: Tensor,
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         """Backbone architecture"""
         # Embed the input fields into patches
         # input:(B, N, Z, H, W) ([1, 5, 13, 721, 1440])input_surface(B,N,H,W)([1, 4, 721, 1440])
@@ -70,10 +76,13 @@ class PanguPowerPatchRecovery(PanguModel):
         # Skip connect, in last dimension(C from 192 to 384)
         x = torch.cat((skip, x), dim=-1)
 
-        # Recover the output fields from patches
-        output = self._output_layer(x, 8, 181, 360)
+        # Calculate weather output (just vor visualization)
+        output_upper, output_surface = self._weather_output_layer(x, 8, 181, 360)
 
-        return output
+        # Recover the output fields from patches
+        output = self._output_power_layer(x, 8, 181, 360)
+
+        return output, output_surface
 
 
 class PanguPowerConv(PanguModel):
@@ -138,7 +147,8 @@ class PanguPowerConv(PanguModel):
 
         output_power = self._conv_power_layers(output_upper, output_surface)
 
-        return output_power
+        # Return output_surface for visualization purposes only
+        return output_power, output_surface
 
 
 class PanguPowerConvSigmoid(PanguPowerConv):

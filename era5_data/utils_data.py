@@ -514,6 +514,16 @@ def normBackData(upper, surface, statistics):
     return upper, surface
 
 
+def normBackDataSurface(surface, statistics):
+    surface_mean, surface_std = (
+        statistics[0],
+        statistics[1],
+    )
+    surface = surface * surface_std + surface_mean
+
+    return surface
+
+
 if __name__ == "__main__":
     # dataset_path = cfg.PG_INPUT_PATH
     # means, std = LoadStatic(os.path.join(dataset_path, 'aux_data'))
