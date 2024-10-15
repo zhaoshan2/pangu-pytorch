@@ -145,7 +145,7 @@ def train(
         model_save_path = os.path.join(res_path, "models")
         utils.mkdirs(model_save_path)
 
-        if i % cfg.PG.TRAIN.SAVE_INTERVAL == 0:
+        if rank == 0 and i % cfg.PG.TRAIN.SAVE_INTERVAL == 0:
             save_file = {
                 "model": model.state_dict(),
                 "optimizer": optimizer.state_dict(),

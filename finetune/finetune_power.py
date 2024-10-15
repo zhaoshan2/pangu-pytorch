@@ -215,6 +215,7 @@ def main(args: argparse.Namespace) -> None:
         writer=writer,
         logger=logger,
         start_epoch=start_epoch,
+        rank=rank,
     )
 
     if args.load_my_best:
