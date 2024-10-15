@@ -308,7 +308,7 @@ def _calc_max_bias(output, target):
     """Calculate the maximum bias between the output and target. Used for bias color scale"""
     bias = output - target
     bias_masked = bias[~torch.isnan(bias)]
-    max_bias = torch.max(bias_masked).item()
+    max_bias = torch.max(torch.abs(bias_masked)).item()
     return max_bias
 
 
