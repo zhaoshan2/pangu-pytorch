@@ -6,6 +6,7 @@ from datetime import datetime
 import warnings
 from era5_data import utils, utils_data
 from era5_data.config import cfg
+from typing import Tuple, Dict
 
 warnings.filterwarnings(
     "ignore",
@@ -23,14 +24,26 @@ def load_land_sea_mask(device, mask_type="sea", fill_value=0):
     )
 
 
-def model_inference(model, input, input_surface, aux_constants):
-    return model(
+def model_inference(
+    model: nn.Module,
+    input: torch.Tensor,
+    input_surface: torch.Tensor,
+    aux_constants: Dict[str, torch.Tensor],
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    output_power, output_surface = model(
         input,
         input_surface,
         aux_constants["weather_statistics"],
         aux_constants["constant_maps"],
         aux_constants["const_h"],
     )
+
+    # Transfer to the output to the original data range
+    output_surface = utils_data.normBackDataSurface(
+        output_surface, aux_constants["weather_statistics_last"]
+    )
+
+    return output_power, output_surface
 
 
 def calculate_loss(output, target, criterion, lsm_expanded):
@@ -96,19 +109,28 @@ def train(
         print(f"Starting epoch {i}/{epochs}")
 
         for id, train_data in enumerate(train_loader):
-            input, input_surface, target, periods = train_data
-            input, input_surface, target = (
+            (
+                input,
+                input_surface,
+                target_power,
+                target_upper,
+                target_surface,
+                periods,
+            ) = train_data
+            input, input_surface, target_power = (
                 input.to(device),
                 input_surface.to(device),
-                target.to(device),
+                target_power.to(device),
             )
             print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
 
             optimizer.zero_grad()
             model.train()
-            output = model_inference(model, input, input_surface, aux_constants)
-            lsm_expanded = load_land_sea_mask(output.device)
-            loss = calculate_loss(output, target, criterion, lsm_expanded)
+            output_power, output_surface = model_inference(
+                model, input, input_surface, aux_constants
+            )
+            lsm_expanded = load_land_sea_mask(output_power.device)
+            loss = calculate_loss(output_power, target_power, criterion, lsm_expanded)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
