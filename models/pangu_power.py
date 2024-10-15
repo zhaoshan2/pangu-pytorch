@@ -6,11 +6,12 @@ from torch import Tensor
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import torch
 from models.layers import (
-    PatchRecoveryPowerSurface,
+    PatchRecoveryPowerAll,
     PatchRecovery_pretrain,
     PowerConv,
     PowerConvWithSigmoid,
 )
+from era5_data.config import cfg
 from models.pangu_model import PanguModel
 
 
@@ -31,9 +32,12 @@ class PanguPowerPatchRecovery(PanguModel):
             device=device,
         )
 
+        # Delete the pangu output layer
+        del self._output_layer
+
         # Replace the output layer with PatchRecovery_transfer
         self._output_weather_layer = PatchRecovery_pretrain(dims[-2])
-        self._output_power_layer = PatchRecoveryPowerSurface(dims[-2])  # dims[-2] = 384
+        self._output_power_layer = PatchRecoveryPowerAll(dims[-2])  # dims[-2] = 384
 
     def forward(
         self,
@@ -77,12 +81,40 @@ class PanguPowerPatchRecovery(PanguModel):
         x = torch.cat((skip, x), dim=-1)
 
         # Calculate weather output (just vor visualization)
-        output_upper, output_surface = self._weather_output_layer(x, 8, 181, 360)
+        output_upper, output_surface = self._output_weather_layer(x, 8, 181, 360)
 
         # Recover the output fields from patches
         output = self._output_power_layer(x, 8, 181, 360)
 
         return output, output_surface
+
+    def load_pangu_state_dict(self, device: torch.device) -> None:
+        """Get the prepared state dict of the pretrained pangu weights"""
+        checkpoint = torch.load(
+            cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
+        )
+        pretrained_dict = checkpoint["model"]
+        model_dict = self.state_dict()
+
+        # Filter out keys in pretrained_dict & rename to _output_weather_layer
+        pretrained_dict = {
+            (
+                k.replace("_output_layer", "_output_weather_layer")
+                if "_output_layer" in k
+                else k
+            ): v
+            for k, v in pretrained_dict.items()
+        }
+
+        # Update the model's state_dict except the _output_layer
+        model_dict.update(pretrained_dict)
+
+        # Remove keys from model_dict that contain _output_layer
+        keys_to_remove = [k for k in model_dict.keys() if "_output_layer" in k]
+        for k in keys_to_remove:
+            del model_dict[k]
+
+        self.load_state_dict(model_dict)
 
 
 class PanguPowerConv(PanguModel):
@@ -169,3 +201,13 @@ class PanguPowerConvSigmoid(PanguPowerConv):
         )
 
         self._conv_power_layers = PowerConvWithSigmoid()
+
+
+def main():
+    pppr = PanguPowerPatchRecovery()
+    pppr.load_pangu_state_dict(torch.device("cpu"))
+
+
+if __name__ == "__main__":
+    model = PanguPowerPatchRecovery()
+    model.load_pangu_state_dict(torch.device("cpu"))

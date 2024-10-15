@@ -846,7 +846,7 @@ class PatchRecoveryPowerSurface(nn.Module):
         return output
 
 
-class PatchRecoveryAll(nn.Module):
+class PatchRecoveryPowerAll(nn.Module):
     def __init__(self, dim):
         super().__init__()
         """Patch recovery operation"""
@@ -1000,7 +1000,7 @@ def main():
     W = 360
 
     # Instantiate the PatchRecoveryAll class
-    model = PatchRecoveryAll(dim=384)
+    model = PatchRecoveryPowerAll(dim=384)
 
     # Call the forward method
     output = model.forward(x, Z, H, W)

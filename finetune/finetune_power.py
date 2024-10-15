@@ -36,27 +36,10 @@ def setup_model(model_type: str, device: torch.device) -> torch.nn.Module:
     """
     if model_type == "PanguPowerPatchRecovery":
         model = PanguPowerPatchRecovery(device=device).to(device)
-
-        checkpoint = torch.load(
-            cfg.PG.BENCHMARK.PRETRAIN_24_torch, map_location=device, weights_only=False
-        )
-
-        pretrained_dict = checkpoint["model"]
-        model_dict = model.state_dict()
-
-        # Filter out keys in pretrained_dict that belong to _output_layer (conv and conv_surface)
-        pretrained_dict = {
-            k: v for k, v in pretrained_dict.items() if "_output_layer" not in k
-        }
-
-        # Update the model's state_dict except the _output_layer
-        model_dict.update(pretrained_dict)
-
-        # Load the updated state_dict into the model
-        model.load_state_dict(model_dict)
+        model.load_pangu_state_dict(device)
 
         # Only finetune the last layer
-        set_requires_grad(model, "_output_layer")
+        set_requires_grad(model, "_output_power_layer")
 
     elif model_type == "PanguPowerConv":
         model = PanguPowerConv(device=device).to(device)
@@ -181,7 +164,7 @@ def main(args: argparse.Namespace) -> None:
         False,
     )
 
-    model = setup_model("PanguPowerConvSigmoid", device)
+    model = setup_model("PanguPowerPatchRecovery", device)
 
     optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -230,9 +213,7 @@ def main(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--type_net", type=str, default="PanguPowerConv_64_128_64_1_k3_sigmoid"
-    )
+    parser.add_argument("--type_net", type=str, default="PatchRecoveryAll")
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
