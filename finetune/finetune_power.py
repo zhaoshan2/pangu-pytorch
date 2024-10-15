@@ -4,11 +4,12 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append("/hkfs/home/project/hk-project-test-mlperf/om1434/masterarbeit")
 from wind_fusion import energy_dataset
-
+from era5_data.utils_dist import get_dist_info, init_dist
 from era5_data import utils
 from era5_data.config import cfg
 import torch
 from torch.optim.adam import Adam
+from torch.utils.data.distributed import DistributedSampler
 import os
 from torch.utils import data
 from models.pangu_power_sample import test, train
@@ -68,7 +69,12 @@ def setup_model(model_type: str, device: torch.device) -> torch.nn.Module:
 
 
 def create_dataloader(
-    start: str, end: str, freq: str, batch_size: int, shuffle: bool
+    start: str,
+    end: str,
+    freq: str,
+    batch_size: int,
+    shuffle: bool,
+    distributed: bool = False,
 ) -> data.DataLoader:
     dataset = energy_dataset.EnergyDataset(
         filepath_era5=cfg.ERA5_PATH,
@@ -77,13 +83,22 @@ def create_dataloader(
         endDate=end,
         freq=freq,
     )
+    if not distributed:
+        return data.DataLoader(
+            dataset=dataset,
+            batch_size=batch_size,
+            drop_last=True,
+            shuffle=shuffle,
+            num_workers=0,
+            pin_memory=False,
+        )
+    train_sampler = DistributedSampler(dataset, shuffle=True, drop_last=True)
     return data.DataLoader(
         dataset=dataset,
         batch_size=batch_size,
-        drop_last=True,
-        shuffle=shuffle,
         num_workers=0,
         pin_memory=False,
+        sampler=train_sampler,
     )
 
 
@@ -125,13 +140,17 @@ def setup_logger(type_net, horizon, output_path):
 
 
 def main(args: argparse.Namespace) -> None:
-    opt = {
-        "gpu_ids": list(range(torch.cuda.device_count()))
-    }  # Automatically select available GPUs
+    opt = {"gpu_ids": [0, 1, 2, 3]}  # select GPUs
     gpu_list = ",".join(str(x) for x in opt["gpu_ids"])
-    print(f"Available GPUs: {gpu_list}")
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_list
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if args.dist:
+        init_dist("pytorch")
+    rank, world_size = get_dist_info()
+    print("The rank and world size is", rank, world_size)
+    if rank == 0:
+        print(f"Predicting on {device}")
 
     output_path = os.path.join(cfg.PG_OUT_PATH, args.type_net, str(cfg.PG.HORIZON))
     utils.mkdirs(output_path)
@@ -139,15 +158,17 @@ def main(args: argparse.Namespace) -> None:
     writer = setup_writer(output_path)
     logger = setup_logger(args.type_net, cfg.PG.HORIZON, output_path)
 
-    logger.info(f"Start finetuning {args.type_net} on energy dataset")
-    logger.info(f"Predicting on {device}")
+    if rank == 0:
+        logger.info(f"Start finetuning {args.type_net} on energy dataset")
+        logger.info(f"Predicting on {device}")
 
     train_dataloader = create_dataloader(
         cfg.PG.TRAIN.START_TIME,
         cfg.PG.TRAIN.END_TIME,
         cfg.PG.TRAIN.FREQUENCY,
-        cfg.PG.TRAIN.BATCH_SIZE,
+        cfg.PG.TRAIN.BATCH_SIZE // len(opt["gpu_ids"]),
         True,
+        args.dist,
     )
     val_dataloader = create_dataloader(
         cfg.PG.VAL.START_TIME,
@@ -171,10 +192,10 @@ def main(args: argparse.Namespace) -> None:
         lr=cfg.PG.TRAIN.LR,
         weight_decay=cfg.PG.TRAIN.WEIGHT_DECAY,
     )
-
-    msg = "\n"
-    msg += utils.torch_summarize(model, show_weights=False)
-    logger.info(msg)
+    if rank == 0:
+        msg = "\n"
+        msg += utils.torch_summarize(model, show_weights=False)
+        logger.info(msg)
 
     torch.set_num_threads(cfg.GLOBAL.NUM_STREADS)
 
@@ -213,10 +234,10 @@ def main(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type_net", type=str, default="PatchRecoveryAll")
+    parser.add_argument("--type_net", type=str, default="PatchRecoveryAllDist")
     parser.add_argument("--load_my_best", type=bool, default=True)
     parser.add_argument("--launcher", default="pytorch", help="job launcher")
     parser.add_argument("--local-rank", type=int, default=0)
-    parser.add_argument("--dist", default=False)
+    parser.add_argument("--dist", default=True)
     args = parser.parse_args()
     main(args)
