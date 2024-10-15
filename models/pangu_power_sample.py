@@ -205,13 +205,14 @@ def train(
                 if val_loss < best_loss:
                     best_loss = val_loss
                     best_model = copy.deepcopy(model)
-                    torch.save(
-                        best_model, os.path.join(model_save_path, "best_model.pth")
-                    )
-                    print(
-                        f"New best model saved at epoch {i} with validation loss: {val_loss:.4f}"
-                    )
-                    logger.info(f"current best model is saved at {i} epoch.")
+                    if rank == 0:
+                        torch.save(
+                            best_model, os.path.join(model_save_path, "best_model.pth")
+                        )
+                        print(
+                            f"New best model saved at epoch {i} with validation loss: {val_loss:.4f}"
+                        )
+                        logger.info(f"current best model is saved at {i} epoch.")
                     epochs_since_last_improvement = 0
                 else:
                     epochs_since_last_improvement += 1
