@@ -42,6 +42,7 @@ if __name__ == "__main__":
     # ----------------------------------------
     # distributed settings
     # ----------------------------------------
+    print("Setup distributed settings")
     if args.dist:
         init_dist("pytorch")
     rank, world_size = get_dist_info()

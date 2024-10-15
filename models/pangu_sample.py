@@ -55,9 +55,6 @@ def train(
             # Load weather data at time t as the input; load weather data at time t+336 as the output
             # Note the data need to be randomly shuffled
             input, input_surface, target, target_surface, periods = train_data
-            # TODO(EliasKng): Check if this is necessary/makes sense
-            input.requires_grad = True
-            input_surface.requires_grad = True
             input, input_surface, target, target_surface = (
                 input.to(device),
                 input_surface.to(device),
@@ -94,7 +91,7 @@ def train(
             if cfg.PG.TRAIN.USE_LSM:
                 loss_surface_device = loss_surface.device
                 loss_upper_device = loss_upper.device
-                lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasks(
+                lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasksPangu(
                     loss_upper_device,
                     loss_surface_device,
                     mask_type="sea",
@@ -200,7 +197,7 @@ def train(
                         (
                             lsm_expanded,
                             lsm_surface_expanded,
-                        ) = utils_data.loadLandSeaMasks(
+                        ) = utils_data.loadLandSeaMasksPangu(
                             val_loss_upper_device,
                             val_loss_surface_device,
                             mask_type="sea",
@@ -343,7 +340,7 @@ def test(test_loader, model, device, res_path):
         if cfg.PG.TEST.USE_LSM:
             device_upper = output_test.device
             device_surface = output_surface_test.device
-            lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasks(
+            lsm_expanded, lsm_surface_expanded = utils_data.loadLandSeaMasksPangu(
                 device_upper, device_surface, mask_type="sea", fill_value=float("nan")
             )
 
@@ -372,6 +369,14 @@ def test(test_loader, model, device, res_path):
             target_surface_test.detach().cpu().squeeze(),
             input_surface_test.detach().cpu().squeeze(),
             var="t2m",
+            step=target_time,
+            path=png_path,
+        )
+
+        utils.visualize_windspeed(
+            output_surface_test.detach().cpu().squeeze(),
+            target_surface_test.detach().cpu().squeeze(),
+            input_surface_test.detach().cpu().squeeze(),
             step=target_time,
             path=png_path,
         )

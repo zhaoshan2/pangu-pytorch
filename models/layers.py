@@ -1,4 +1,3 @@
-# The pseudocode can be implemented using deep learning libraries, e.g., Pytorch and Tensorflow or other high-level APIs
 import sys
 import os
 
@@ -717,7 +716,8 @@ class PatchRecovery_pretrain(nn.Module):
         """Patch recovery operation"""
         # Hear we use two transposed convolutions to recover data
         self.patch_size = (2, 4, 4)
-        self.dim = dim
+        self.dim = dim  # 384
+        # Bekomme 384 Enigabebilder, Projiziere runter auf 160 Aufgabebilder
         self.conv = nn.Conv1d(
             in_channels=dim, out_channels=160, kernel_size=1, stride=1
         )
@@ -725,17 +725,22 @@ class PatchRecovery_pretrain(nn.Module):
             in_channels=dim, out_channels=64, kernel_size=1, stride=1
         )
 
-    def forward(self, x, Z, H, W):
+    def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
         # The inverse operation of the patch embedding operation, patch_size = (2, 4, 4) as in the original paper
         # Reshape x back to three dimensions
-        x = torch.permute(x, (0, 2, 1))
-        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # (1,384,8,181,360)
+        x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
+        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # [1, 384, 8, 181, 360]
 
-        # Call the transposed convolution
-        output = x[:, :, 1:, :, :]
-        output = output.view(output.shape[0], output.shape[1], -1)  # 456120
-        output = self.conv(output)
-        # patch_size
+        # Slice out atmospheric data
+        output = x[:, :, 1:, :, :]  # [1, 384, 7, 181, 360]
+
+        # Flatten
+        output = output.view(output.shape[0], output.shape[1], -1)  # [1, 384, 456120]
+
+        # Apply upper convolution
+        output = self.conv(output)  # [1, 160, 456120]
+
+        # Recover [724, 1440] shape
         output = output.reshape(
             output.shape[0],
             5,
@@ -745,71 +750,269 @@ class PatchRecovery_pretrain(nn.Module):
             Z - 1,
             H,
             W,
-        )  # [1, 5, 2, 4, 4, 7, 181, 360
-        output = torch.permute(output, (0, 1, 5, 2, 6, 3, 7, 4))
-        output = output.reshape(output.shape[0], 5, 14, 724, 1440)
-        # Crop the output to remove zero-paddings
+        )  # [1, 5, 2, 4, 4, 7, 181, 360]
+        output = torch.permute(
+            output, (0, 1, 5, 2, 6, 3, 7, 4)
+        )  # [1, 5, 7, 2, 181, 4, 360, 4]
+        output = output.reshape(
+            output.shape[0], 5, 14, 724, 1440
+        )  # [1, 5, 14, 724, 1440]
+
+        # Remove padding
         depth_slice = slice(0, output.shape[-3] - 1)
         height_slice = slice(0, output.shape[-2] - 3)
-        output = output[:, :, depth_slice, height_slice, :]
-        output = output.view(output.shape[0], 5, 1, 13, 721, 1440)
-        # output = output * self.upper_std + self.upper_mean
-        output = output.view(output.shape[0], 5, 13, 721, 1440)
+        output = output[:, :, depth_slice, height_slice, :]  # [1, 5, 13, 721, 1440]
+        output = output.view(
+            output.shape[0], 5, 1, 13, 721, 1440
+        )  # [1, 5, 1, 13, 721, 1440]
+        output = output.view(output.shape[0], 5, 13, 721, 1440)  # [1, 5, 13, 721, 1440]
 
-        output_surface = x[:, :, 0, :, :]
-        output_surface = output_surface.view(output_surface.shape[0], self.dim, -1)
-        output_surface = self.conv_surface(output_surface)
+        # Slice out surface data
+        output_surface = x[:, :, 0, :, :]  # [1, 384, 181, 360]
+
+        # Flatten
+        output_surface = output_surface.view(
+            output_surface.shape[0], self.dim, -1
+        )  # [1, 384, 65160]
+
+        # Apply surface convolution
+        output_surface = self.conv_surface(output_surface)  # [1, 64, 65160]
+
+        # Recover [724, 1440] shape
         output_surface = output_surface.view(
             output_surface.shape[0], 4, self.patch_size[1], self.patch_size[2], H, W
-        )
-        output_surface = torch.permute(output_surface, (0, 1, 4, 2, 5, 3))
-        output_surface = output_surface.reshape(output_surface.shape[0], 4, 724, 1440)
-        output_surface = output_surface[:, :, height_slice, :]
-        output_surface = output_surface.view(output_surface.shape[0], 4, 1, 721, 1440)
+        )  # [1, 4, 4, 4, 181, 360]
+        output_surface = torch.permute(
+            output_surface, (0, 1, 4, 2, 5, 3)
+        )  # [1, 4, 181, 4, 360, 4]
+        output_surface = output_surface.reshape(
+            output_surface.shape[0], 4, 724, 1440
+        )  # [1, 4, 724, 1440]
+
+        # Remove apdding
+        output_surface = output_surface[:, :, height_slice, :]  # [1, 4, 721, 1440]
+        output_surface = output_surface.view(
+            output_surface.shape[0], 4, 1, 721, 1440
+        )  # [1, 4, 1, 721, 1440]
         # output_surface = output_surface * self.surface_std + self.surface_mean
-        output_surface = output_surface.view(output_surface.shape[0], 4, 721, 1440)
+        output_surface = output_surface.view(
+            output_surface.shape[0], 4, 721, 1440
+        )  # [1, 4, 721, 1440]
 
         return output, output_surface
 
 
-class PatchRecovery_power(nn.Module):
-    """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440])"""
+class PatchRecoveryPowerSurface(nn.Module):
+    """Patch recovery operation for wind power generation (leading to output dimensions of [1, 721, 1440]).
+    Processing both surface and atmospheric in one step (with one convolution) is not done, since for atmospheric variables
+    the data has 5 vars on 13 pressure levels, for surface, there are 4 vars on 1 level (ground).
+    """
 
     def __init__(self, dim):
         super().__init__()
-        """Patch recovery operation for wind power generation"""
-        # Use transposed convolution to recover data
+        """Patch recovery operation"""
         self.patch_size = (2, 4, 4)
-        self.dim = dim
-
-        # A single conv layer to recover both atmospheric and surface data together
-        self.conv = nn.Conv1d(in_channels=dim, out_channels=2, kernel_size=1, stride=1)
+        self.dim = dim  # 384
+        # Receive 384 Input images, project down to 16 output images
+        self.conv = nn.Conv1d(in_channels=dim, out_channels=16, kernel_size=1, stride=1)
 
     def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
         # Reshape x back to three dimensions
         x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
+        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # [1, 384, 8, 181, 360]
 
-        x = x.view(
-            x.shape[0], x.shape[1], Z, H, W
-        )  # Reshape to (batch, channels, Z, H, W) [1, 384, 8, 181, 360]
+        # Slice out surface data
+        output = x[:, :, 0, :, :]  # [1, 384, 181, 360]
 
-        # Combine atmospheric and surface levels (if needed, you can just use all data together)
-        output = x.view(
-            x.shape[0], x.shape[1], -1
-        )  # Flatten spatial dimensions [1, 384, 521280]
+        # Flatten
+        output = output.view(output.shape[0], self.dim, -1)  # [1, 384, 65160]
 
-        # Apply the convolution to recover the final output shape [1, 721, 1440]
-        output = self.conv(output)  # [1, 2, 521280]
+        # Apply convolution
+        output = self.conv(output)  # [1, 16, 65160]
 
-        # Reshape to the desired output shape
+        # Recover [724, 1440] shape
         output = output.view(
-            output.shape[0], 1, 724, 1440
-        )  # [batch, 1 variable, H, W] [1, 1, 724, 1440]
+            output.shape[0], 1, self.patch_size[1], self.patch_size[2], H, W
+        )  # [1, 1, 4, 4, 181, 360]
+        output = torch.permute(output, (0, 1, 4, 2, 5, 3))  # [1, 1, 181, 4, 360, 4]
+        output = output.reshape(output.shape[0], 1, 724, 1440)  # [1, 1, 724, 1440]
 
-        # Crop the output to remove padding and fit the [1, 721, 1440] shape
-        height_slice = slice(0, output.shape[-2] - 3)  # Remove padding on height
-        output = output[
-            :, :, height_slice, :
-        ]  # Final shape [batch, 1, 721, 1440] [1, 1, 721, 1440]
+        # Remove padding
+        height_slice = slice(0, 724 - 3)
+        output = output[:, :, height_slice, :]  # [1, 1, 721, 1440]
+        output = output.view(output.shape[0], 1, 1, 721, 1440)  # [1, 1, 1, 721, 1440]
+        # output_surface = output_surface * self.surface_std + self.surface_mean
+        output = output.view(output.shape[0], 1, 721, 1440)  # [1, 1, 721, 1440]
+        return output
+
+
+class PatchRecoveryUpper(nn.Module):
+    """Patch recovery operation for wind power generation based on upper atmospheric variables.
+    This class processes only the atmospheric data (excluding surface data) to predict wind capacity.
+    Output dimensions: [1, 721, 1440], similar to the surface-level recovery.
+    """
+
+    def __init__(self, dim):
+        super().__init__()
+        """Patch recovery operation"""
+        self.patch_size = (2, 4, 4)
+        self.dim = dim  # 384
+        # Receive 384 input images, project down to 32 output images
+        self.conv = nn.Conv1d(in_channels=dim, out_channels=32, kernel_size=1, stride=1)
+
+    def forward(self, x, Z, H, W):  # x: [1, 521280, 384], Z: 8, H: 181, W: 360
+        # Reshape x back to three dimensions
+        x = torch.permute(x, (0, 2, 1))  # [1, 384, 521280]
+        x = x.view(x.shape[0], x.shape[1], Z, H, W)  # [1, 384, 8, 181, 360]
+
+        # Slice out upper atmospheric data (exclude surface level)
+        output = x[:, :, 1:, :, :]  # [1, 384, 7, 181, 360]
+
+        # Flatten the output
+        output = output.view(output.shape[0], self.dim, -1)  # [1, 384, 456120]
+
+        # Apply convolution
+        output = self.conv(output)  # [1, 32, 456120]
+
+        # Recover [724, 1440] shape
+        output = output.view(
+            output.shape[0],
+            1,
+            self.patch_size[0],
+            self.patch_size[1],
+            self.patch_size[2],
+            Z - 1,
+            H,
+            W,
+        )  # [1, 1, 2, 4, 4, 7, 181, 360]
+        output = torch.permute(
+            output, (0, 1, 5, 2, 6, 3, 7, 4)
+        )  # [1, 1, 7, 2, 181, 4, 360, 4]
+        output = output.reshape(
+            output.shape[0], 1, 14, 724, 1440
+        )  # [1, 1, 14, 724, 1440]
+
+        # Remove padding
+        depth_slice = slice(0, output.shape[-3] - 1)
+        height_slice = slice(0, output.shape[-2] - 3)
+        output = output[:, :, depth_slice, height_slice, :]  # [1, 1, 13, 721, 1440]
+
+        # Reshape to the final output
+        output = output.view(output.shape[0], 1, 13, 721, 1440)  # [1, 1, 13, 721, 1440]
+        # TODO(EliasKng): Fix error: Number of elements should stay the same
+        output = output.view(output.shape[0], 1, 721, 1440)  # [1, 1, 721, 1440]
 
         return output
+
+
+class PowerConv(nn.Module):
+    """
+    A (series of) convolutional layer(s) to finetune on the power prediction task.
+    Attributes:
+        conv_layers (nn.Sequential): A sequential container of convolutional layers,
+                                     batch normalization layers, and ReLU activation functions.
+    """
+
+    def __init__(
+        self,
+        in_channels=28,
+        out_channels_list=[64, 128, 64, 1],
+        kernel_size=3,
+        stride=1,
+        padding=1,
+    ):
+        """
+        Initializes the PowerPanguConv class with the given parameters.
+        Args:
+            in_channels (int): Number of input channels for the first convolutional layer. Default is 28. (u and v for 13 pressure levels, u10m, v10m)
+            out_channels_list (list): List of output channels for each convolutional layer. Default is [1]. Could also be e.g., [64, 32, 16, 1].
+            kernel_size (int or tuple): Size of the convolving kernel. Default is 1.
+            stride (int or tuple): Stride of the convolution. Default is 1.
+            padding (int or tuple): Zero-padding added to both sides of the input. Default is 1.
+        """
+        super().__init__()
+
+        print("PowerConv initialized with the following parameters:")
+        print(f"in_channels: {in_channels}")
+        print(f"out_channels_list: {out_channels_list}")
+        print(f"kernel_size: {kernel_size}")
+        print(f"stride: {stride}")
+        print(f"padding: {padding}")
+
+        layers = []
+        current_in_channels = in_channels
+
+        # Build multiple convolutional layers
+        for out_channels in out_channels_list:
+            layers.append(
+                nn.Conv2d(
+                    in_channels=current_in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=padding,
+                    padding_mode="circular",
+                )
+            )
+            layers.append(nn.BatchNorm2d(out_channels))  # Add batch normalization
+            layers.append(nn.ReLU())  # Add ReLU activation function
+            current_in_channels = out_channels
+
+        self.conv_layers = nn.Sequential(*layers)  # Combine layers sequentially
+
+    def forward(self, output_upper, output_surface):
+        # Slice out wind variables
+        output_upper = output_upper[:, -2:, :, :, :]
+        output_surface = output_surface[:, 1:3, :, :]
+
+        # Reshape output_upper from [1, 2, 13, 721, 1440] to [1, 26, 721, 1440]
+        batch_size = output_upper.size(0)  # Extract the batch size
+        output_upper = output_upper.reshape(
+            batch_size,
+            output_upper.size(1) * output_upper.size(2),
+            *output_upper.shape[3:],
+        )
+
+        # Concatenate with output_surface [1, 2, 721, 1440] along the channel dimension
+        concatenated_output = torch.cat([output_upper, output_surface], dim=1)
+
+        # Apply the sequential layers
+        output = self.conv_layers(concatenated_output)
+        return output
+
+
+class PowerConvWithSigmoid(PowerConv):
+    """Replaces the last layer of PowerConv with a Sigmoid layer to better reflect the output range of wind power generation which is between [0, 1]"""
+
+    def __init__(self):
+        super().__init__()
+
+        # Replace the last ReLU layer with a Sigmoid layer
+        if isinstance(self.conv_layers[-1], nn.ReLU):
+            self.conv_layers[-1] = nn.Sigmoid()
+        else:
+            raise ValueError(
+                "The last layer is not a ReLU layer and cannot be replaced with Sigmoid."
+            )
+
+
+if __name__ == "__main__":
+    # Dimensions for the input tensor
+    batch_size = 1
+    total_elements = 521280  # 384 * 8 * 181 * 360 flattened
+    dim = 384  # Input dimension (number of channels)
+    Z = 8  # Number of vertical levels (pressure levels)
+    H = 181  # Height (latitude)
+    W = 360  # Width (longitude)
+
+    # Create a random input tensor with shape [1, 521280, 384]
+    input_tensor = torch.randn(batch_size, total_elements, dim)
+
+    # Initialize the PatchRecoveryUpper class
+    model = PatchRecoveryUpper(dim=dim)
+
+    # Forward pass through the model
+    output = model(input_tensor, Z, H, W)
+
+    # Print the output shape to verify the result
+    print("Output shape:", output.shape)  # Expected shape: [1, 1, 721, 1440]
