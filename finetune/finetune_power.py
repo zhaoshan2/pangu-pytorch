@@ -4,12 +4,14 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.append("/hkfs/home/project/hk-project-test-mlperf/om1434/masterarbeit")
 from wind_fusion import energy_dataset
-from era5_data.utils_dist import get_dist_info, init_dist
 from era5_data import utils
 from era5_data.config import cfg
 import torch
 from torch.optim.adam import Adam
 from torch.utils.data.distributed import DistributedSampler
+from torch.distributed import init_process_group, destroy_process_group
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
 import os
 from torch.utils import data
 from models.pangu_power_sample import test, train
@@ -66,6 +68,18 @@ def setup_model(model_type: str, device: torch.device) -> torch.nn.Module:
         raise ValueError("Model not found")
 
     return model
+
+
+def ddp_setup(rank, world_size):
+    """
+    Args:
+        rank: Unique identifier of each process
+        world_size: Total number of processes
+    """
+    os.environ["MASTER_ADDR"] = "ftp-x86n6.localdomain"
+    os.environ["MASTER_PORT"] = "12357"
+    torch.cuda.set_device(rank)
+    init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 
 def create_dataloader(
@@ -139,18 +153,10 @@ def setup_logger(type_net, horizon, output_path):
     return logger
 
 
-def main(args: argparse.Namespace) -> None:
-    opt = {"gpu_ids": [0, 1, 2, 3]}  # select GPUs
-    gpu_list = ",".join(str(x) for x in opt["gpu_ids"])
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_list
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
+    ddp_setup(rank, world_size)
 
-    if args.dist:
-        init_dist("pytorch")
-    rank, world_size = get_dist_info()
-    print("The rank and world size is", rank, world_size)
-    if rank == 0:
-        print(f"Predicting on {device}")
+    print(f"Rank: {rank}, World Size: {world_size}")
 
     output_path = os.path.join(cfg.PG_OUT_PATH, args.type_net, str(cfg.PG.HORIZON))
     utils.mkdirs(output_path)
@@ -160,13 +166,12 @@ def main(args: argparse.Namespace) -> None:
 
     if rank == 0:
         logger.info(f"Start finetuning {args.type_net} on energy dataset")
-        logger.info(f"Predicting on {device}")
 
     train_dataloader = create_dataloader(
         cfg.PG.TRAIN.START_TIME,
         cfg.PG.TRAIN.END_TIME,
         cfg.PG.TRAIN.FREQUENCY,
-        cfg.PG.TRAIN.BATCH_SIZE // len(opt["gpu_ids"]),
+        cfg.PG.TRAIN.BATCH_SIZE // world_size,
         True,
         args.dist,
     )
@@ -185,7 +190,10 @@ def main(args: argparse.Namespace) -> None:
         False,
     )
 
-    model = setup_model("PanguPowerPatchRecovery", device)
+    model = PanguPowerConv(device=rank).to(rank)
+    model = DDP(model, device_ids=[rank])
+
+    print("SETUP DDP")
 
     optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -211,12 +219,14 @@ def main(args: argparse.Namespace) -> None:
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         res_path=output_path,
-        device=device,
+        device=rank,
         writer=writer,
         logger=logger,
         start_epoch=start_epoch,
         rank=rank,
     )
+
+    destroy_process_group()
 
     if args.load_my_best:
         best_model = torch.load(
@@ -228,7 +238,7 @@ def main(args: argparse.Namespace) -> None:
     test(
         test_loader=test_dataloader,
         model=best_model,
-        device=device,
+        device=rank,
         res_path=output_path,
     )
 
@@ -241,4 +251,9 @@ if __name__ == "__main__":
     parser.add_argument("--local-rank", type=int, default=0)
     parser.add_argument("--dist", default=True)
     args = parser.parse_args()
-    main(args)
+
+    world_size = torch.cuda.device_count()
+
+    print(f"World size: {world_size}")
+
+    mp.spawn(main, args=(args, world_size), nprocs=world_size)
