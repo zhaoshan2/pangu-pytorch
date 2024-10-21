@@ -106,7 +106,15 @@ def train(
     best_model = model
     aux_constants = load_constants(rank)
 
+    # Termination flag to signal early stopping
+    early_stop_flag = torch.tensor(
+        [0], dtype=torch.int, device=f"cuda:{rank}"
+    )  # 0 means continue, 1 means stop
+
     for i in range(start_epoch, epochs + 1):
+        if early_stop_flag.item() == 1:
+            break  # If early stop flag is set, break out of the loop
+
         epoch_loss = train_one_epoch(
             model,
             train_loader,
@@ -123,7 +131,9 @@ def train(
         if rank == 0 and i % cfg.PG.TRAIN.SAVE_INTERVAL == 0:
             save_model_checkpoint(model, optimizer, lr_scheduler, res_path, i)
 
-        if rank == 0 and i % cfg.PG.VAL.INTERVAL == 0:
+        # Validate on all ranks (on purpose, since barrier times out if only rank 0 validates)
+        # TODO(EliasKng): Use DistributedSampler to spread validation across all ranks, then calculate mean loss
+        if i % cfg.PG.VAL.INTERVAL == 0:
             val_loss, best_model, epochs_since_last_improvement = validate(
                 model,
                 val_loader,
@@ -140,16 +150,18 @@ def train(
                 i,
             )
 
-            if epochs_since_last_improvement >= 5:
+            # Set early stop flag
+            if rank == 0 and epochs_since_last_improvement >= 5:
                 logger.info(
                     f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
                 )
-                # TODO(EliasKng): Handle this case in DDP scenario: other ranks should stop aswell
-                break
+                early_stop_flag[0] = 1  # Set the early stop flag
 
-        print(f"[Rank {rank}] enter barrier")
+        # Broadcast early stop flag from rank 0 to all other ranks
+        dist.broadcast(early_stop_flag, src=0)
+
+        # Synchronize all ranks
         dist.barrier()
-        print(f"[Rank {rank}] exit barrier")
 
     return best_model
 
@@ -205,7 +217,7 @@ def train_one_epoch(
 def save_model_checkpoint(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
-    lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
+    lr_scheduler: torch.optim.lr_scheduler.MultiStepLR,
     res_path: str,
     epoch: int,
 ) -> None:
@@ -265,7 +277,6 @@ def validate(
             val_loss += loss.item()
 
         val_loss /= len(val_loader)
-        print(f"Validation loss at epoch {epoch}: {val_loss:.4f}")
         writer.add_scalars("Loss", {"train": epoch_loss, "val": val_loss}, epoch)
         logger.info("Validate at Epoch {} : {:.3f}".format(epoch, val_loss))
         png_path = os.path.join(res_path, "png_training")
@@ -287,10 +298,9 @@ def validate(
                 torch.save(
                     best_model, os.path.join(res_path, "models", "best_model.pth")
                 )
-                print(
+                logger.info(
                     f"New best model saved at epoch {epoch} with validation loss: {val_loss:.4f}"
                 )
-                logger.info(f"current best model is saved at {epoch} epoch.")
             epochs_since_last_improvement = 0
         else:
             epochs_since_last_improvement += 1
