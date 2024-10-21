@@ -2,6 +2,7 @@ import os
 import copy
 import torch
 from torch import nn
+import torch.distributed as dist
 from datetime import datetime
 import warnings
 from era5_data import utils, utils_data
@@ -89,9 +90,8 @@ def train(
     train_loader: torch.utils.data.DataLoader,
     val_loader: torch.utils.data.DataLoader,
     optimizer: torch.optim.Optimizer,
-    lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
+    lr_scheduler: torch.optim.lr_scheduler.MultiStepLR,
     res_path: str,
-    device: torch.device,
     writer: SummaryWriter,
     logger: logging.Logger,
     start_epoch: int,
@@ -104,7 +104,7 @@ def train(
     best_loss = float("inf")
     epochs_since_last_improvement = 0
     best_model = model
-    aux_constants = load_constants(device)
+    aux_constants = load_constants(rank)
 
     for i in range(start_epoch, epochs + 1):
         epoch_loss = train_one_epoch(
@@ -113,7 +113,6 @@ def train(
             optimizer,
             criterion,
             aux_constants,
-            device,
             logger,
             rank,
             i,
@@ -124,13 +123,12 @@ def train(
         if rank == 0 and i % cfg.PG.TRAIN.SAVE_INTERVAL == 0:
             save_model_checkpoint(model, optimizer, lr_scheduler, res_path, i)
 
-        if i % cfg.PG.VAL.INTERVAL == 0:
+        if rank == 0 and i % cfg.PG.VAL.INTERVAL == 0:
             val_loss, best_model, epochs_since_last_improvement = validate(
                 model,
                 val_loader,
                 criterion,
                 aux_constants,
-                device,
                 writer,
                 logger,
                 res_path,
@@ -143,14 +141,15 @@ def train(
             )
 
             if epochs_since_last_improvement >= 5:
-                print(
-                    f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
-                )
                 logger.info(
                     f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
                 )
                 # TODO(EliasKng): Handle this case in DDP scenario: other ranks should stop aswell
                 break
+
+        print(f"[Rank {rank}] enter barrier")
+        dist.barrier()
+        print(f"[Rank {rank}] exit barrier")
 
     return best_model
 
@@ -161,7 +160,6 @@ def train_one_epoch(
     optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
     aux_constants: Dict[str, torch.Tensor],
-    device: torch.device,
     logger: logging.Logger,
     rank: int,
     epoch: int,
@@ -179,9 +177,9 @@ def train_one_epoch(
             periods,
         ) = train_data
         input, input_surface, target_power = (
-            input.to(device),
-            input_surface.to(device),
-            target_power.to(device),
+            input.to(rank),
+            input_surface.to(rank),
+            target_power.to(rank),
         )
         print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
 
@@ -228,7 +226,6 @@ def validate(
     val_loader: torch.utils.data.DataLoader,
     criterion: nn.Module,
     aux_constants: Dict[str, torch.Tensor],
-    device: torch.device,
     writer: SummaryWriter,
     logger: logging.Logger,
     res_path: str,
@@ -253,9 +250,9 @@ def validate(
                 periods_val,
             ) = val_data
             input_val, input_surface_val, target_power_val = (
-                input_val.to(device),
-                input_surface_val.to(device),
-                target_power_val.to(device),
+                input_val.to(rank),
+                input_surface_val.to(rank),
+                target_power_val.to(rank),
             )
             print(f"(V) Processing batch {id + 1}/{len(val_loader)}")
             output_power_val, output_surface_val = model_inference(

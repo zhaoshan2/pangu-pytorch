@@ -1,6 +1,6 @@
 import sys
 import os
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from torch import Tensor
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -124,7 +124,7 @@ class PanguPowerConv(PanguModel):
         num_heads: List[int] = [6, 12, 12, 6],
         dims: List[int] = [192, 384, 384, 192],
         patch_size: Tuple[int, int, int] = (2, 4, 4),
-        device: Optional[torch.device] = None,
+        device: Optional[Union[torch.device, int]] = None,
     ) -> None:
         super(PanguPowerConv, self).__init__(
             depths=depths,
