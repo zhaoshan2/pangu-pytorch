@@ -138,7 +138,7 @@ def set_requires_grad(model: torch.nn.Module, layer_name: str) -> None:
             print("Requires grad: ", name)
 
 
-def setup_writer(output_path):
+def setup_writer(output_path: str) -> SummaryWriter:
     writer_path = os.path.join(output_path, "writer")
     if not os.path.exists(writer_path):
         os.mkdir(writer_path)
@@ -182,18 +182,9 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
         cfg.PG.VAL.BATCH_SIZE,
         False,
     )
-    test_dataloader = create_dataloader(
-        cfg.PG.TEST.START_TIME,
-        cfg.PG.TEST.END_TIME,
-        cfg.PG.TEST.FREQUENCY,
-        cfg.PG.TEST.BATCH_SIZE,
-        False,
-    )
 
     model = PanguPowerConv(device=rank).to(rank)
     model = DDP(model, device_ids=[rank])
-
-    print("SETUP DDP")
 
     optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -219,7 +210,6 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
         res_path=output_path,
-        device=rank,
         writer=writer,
         logger=logger,
         start_epoch=start_epoch,
@@ -228,22 +218,38 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
 
     destroy_process_group()
 
+
+def test_best_model(args):
+    output_path = os.path.join(cfg.PG_OUT_PATH, args.type_net, str(cfg.PG.HORIZON))
+    utils.mkdirs(output_path)
+    logger = setup_logger(args.type_net, cfg.PG.HORIZON, output_path)
+    logger.info("Begin testing...")
+
     if args.load_my_best:
         best_model = torch.load(
-            os.path.join(output_path, "models/best_model.pth"), map_location="cuda:0"
+            os.path.join(output_path, "models/best_model.pth"),
+            map_location="cuda:0",
+            weights_only=False,
         )
 
-    logger.info("Begin testing...")
+    test_dataloader = create_dataloader(
+        cfg.PG.TEST.START_TIME,
+        cfg.PG.TEST.END_TIME,
+        cfg.PG.TEST.FREQUENCY,
+        cfg.PG.TEST.BATCH_SIZE,
+        False,
+    )
 
     test(
         test_loader=test_dataloader,
         model=best_model,
-        device=rank,
+        device=0,
         res_path=output_path,
     )
 
 
 if __name__ == "__main__":
+    # TODO(EliasKng): Make sure the script still runs with dist = False
     parser = argparse.ArgumentParser()
     parser.add_argument("--type_net", type=str, default="PatchRecoveryAllDist")
     parser.add_argument("--load_my_best", type=bool, default=True)
@@ -257,3 +263,4 @@ if __name__ == "__main__":
     print(f"World size: {world_size}")
 
     mp.spawn(main, args=(args, world_size), nprocs=world_size)
+    test_best_model(args)
