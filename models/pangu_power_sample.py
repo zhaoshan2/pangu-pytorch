@@ -6,7 +6,10 @@ from datetime import datetime
 import warnings
 from era5_data import utils, utils_data
 from era5_data.config import cfg
-from typing import Tuple, Dict, Any, List
+from typing import Tuple, Dict, List
+import logging
+from tensorboardX import SummaryWriter
+
 
 warnings.filterwarnings(
     "ignore",
@@ -89,8 +92,8 @@ def train(
     lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
     res_path: str,
     device: torch.device,
-    writer: Any,
-    logger: Any,
+    writer: SummaryWriter,
+    logger: logging.Logger,
     start_epoch: int,
     rank: int = 0,
 ) -> nn.Module:
@@ -159,7 +162,7 @@ def train_one_epoch(
     criterion: nn.Module,
     aux_constants: Dict[str, torch.Tensor],
     device: torch.device,
-    logger: Any,
+    logger: logging.Logger,
     rank: int,
     epoch: int,
 ) -> float:
@@ -226,8 +229,8 @@ def validate(
     criterion: nn.Module,
     aux_constants: Dict[str, torch.Tensor],
     device: torch.device,
-    writer: Any,
-    logger: Any,
+    writer: SummaryWriter,
+    logger: logging.Logger,
     res_path: str,
     best_loss: float,
     epoch_loss: float,
@@ -335,7 +338,3 @@ def test(test_loader, model, device, res_path):
             target_time,
             png_path,
         )
-
-
-if __name__ == "__main__":
-    pass
