@@ -17,6 +17,11 @@ warnings.filterwarnings(
     message="None of the inputs have requires_grad=True. Gradients will be None",
 )
 
+warnings.filterwarnings(
+    "ignore",
+    message="Attempting to use hipBLASLt on an unsupported architecture! Overriding blas backend to hipblas",
+)
+
 
 def load_constants(device):
     return utils_data.loadAllConstants(device=device)
@@ -150,6 +155,10 @@ def train(
                 i,
             )
 
+            # DO NOT COMMIT
+            if rank == 0:
+                early_stop_flag[0] = 1
+
             # Set early stop flag
             if rank == 0 and epochs_since_last_improvement >= 5:
                 logger.info(
@@ -224,7 +233,7 @@ def save_model_checkpoint(
     model_save_path = os.path.join(res_path, "models")
     utils.mkdirs(model_save_path)
     save_file = {
-        "model": model.state_dict(),
+        "model": model.module.state_dict(),
         "optimizer": optimizer.state_dict(),
         "lr_scheduler": lr_scheduler.state_dict(),
         "epoch": epoch,
@@ -277,23 +286,24 @@ def validate(
             val_loss += loss.item()
 
         val_loss /= len(val_loader)
-        writer.add_scalars("Loss", {"train": epoch_loss, "val": val_loss}, epoch)
-        logger.info("Validate at Epoch {} : {:.3f}".format(epoch, val_loss))
-        png_path = os.path.join(res_path, "png_training")
-        utils.mkdirs(png_path)
-        visualize(
-            output_power_val,
-            target_power_val,
-            input_surface_val,
-            output_surface_val,
-            target_surface_val,
-            epoch,
-            png_path,
-        )
+        if rank == 0:
+            writer.add_scalars("Loss", {"train": epoch_loss, "val": val_loss}, epoch)
+            logger.info("Validate at Epoch {} : {:.3f}".format(epoch, val_loss))
+            png_path = os.path.join(res_path, "png_training")
+            utils.mkdirs(png_path)
+            visualize(
+                output_power_val,
+                target_power_val,
+                input_surface_val,
+                output_surface_val,
+                target_surface_val,
+                epoch,
+                png_path,
+            )
 
         if val_loss < best_loss:
             best_loss = val_loss
-            best_model = copy.deepcopy(model)
+            best_model = copy.deepcopy(model.module)
             if rank == 0:
                 torch.save(
                     best_model, os.path.join(res_path, "models", "best_model.pth")
