@@ -6,7 +6,7 @@ from datetime import datetime
 import warnings
 from era5_data import utils, utils_data
 from era5_data.config import cfg
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any, List
 
 warnings.filterwarnings(
     "ignore",
@@ -82,150 +82,220 @@ def save_output_and_target(output_test, target_test, target_time, res_path):
 
 
 def train(
-    model,
-    train_loader,
-    val_loader,
-    optimizer,
-    lr_scheduler,
-    res_path,
-    device,
-    writer,
-    logger,
-    start_epoch,
-    rank=0,
-):
+    model: nn.Module,
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: torch.utils.data.DataLoader,
+    optimizer: torch.optim.Optimizer,
+    lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
+    res_path: str,
+    device: torch.device,
+    writer: Any,
+    logger: Any,
+    start_epoch: int,
+    rank: int = 0,
+) -> nn.Module:
     """Training code"""
     criterion = nn.L1Loss(reduction="none")
     epochs = cfg.PG.TRAIN.EPOCHS
-    loss_list = []
+    loss_list: List[float] = []
     best_loss = float("inf")
     epochs_since_last_improvement = 0
-    best_model = None
+    best_model = model
     aux_constants = load_constants(device)
-    upper_weights, surface_weights = aux_constants["variable_weights"]
 
     for i in range(start_epoch, epochs + 1):
-        epoch_loss = 0.0
-        print(f"Starting epoch {i}/{epochs}")
-
-        for id, train_data in enumerate(train_loader):
-            (
-                input,
-                input_surface,
-                target_power,
-                target_upper,
-                target_surface,
-                periods,
-            ) = train_data
-            input, input_surface, target_power = (
-                input.to(device),
-                input_surface.to(device),
-                target_power.to(device),
-            )
-            print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
-
-            optimizer.zero_grad()
-            model.train()
-            output_power, output_surface = model_inference(
-                model, input, input_surface, aux_constants
-            )
-            lsm_expanded = load_land_sea_mask(output_power.device)
-            loss = calculate_loss(output_power, target_power, criterion, lsm_expanded)
-            loss.backward()
-            optimizer.step()
-            epoch_loss += loss.item()
-
-        epoch_loss /= len(train_loader)
-        print(f"Epoch {i} finished with training loss: {epoch_loss:.4f}")
-        if rank == 0:
-            logger.info("Epoch {} : {:.3f}".format(i, epoch_loss))
+        epoch_loss = train_one_epoch(
+            model,
+            train_loader,
+            optimizer,
+            criterion,
+            aux_constants,
+            device,
+            logger,
+            rank,
+            i,
+        )
         loss_list.append(epoch_loss)
         lr_scheduler.step()
 
-        model_save_path = os.path.join(res_path, "models")
-        utils.mkdirs(model_save_path)
-
         if rank == 0 and i % cfg.PG.TRAIN.SAVE_INTERVAL == 0:
-            save_file = {
-                "model": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "lr_scheduler": lr_scheduler.state_dict(),
-                "epoch": i,
-            }
-            torch.save(
-                save_file, os.path.join(model_save_path, "train_{}.pth".format(i))
-            )
-            print("Model saved at epoch {}".format(i))
+            save_model_checkpoint(model, optimizer, lr_scheduler, res_path, i)
 
         if i % cfg.PG.VAL.INTERVAL == 0:
-            print(f"Starting validation at epoch {i}")
-            with torch.no_grad():
-                model.eval()
-                val_loss = 0.0
-                for id, val_data in enumerate(val_loader, 0):
-                    (
-                        input_val,
-                        input_surface_val,
-                        target_power_val,
-                        target_upper_val,
-                        target_surface_val,
-                        periods_val,
-                    ) = val_data
-                    input_val, input_surface_val, target_power_val = (
-                        input_val.to(device),
-                        input_surface_val.to(device),
-                        target_power_val.to(device),
-                    )
-                    print(f"(V) Processing batch {id + 1}/{len(val_loader)}")
-                    output_power_val, output_surface_val = model_inference(
-                        model, input_val, input_surface_val, aux_constants
-                    )
-                    lsm_expanded = load_land_sea_mask(output_power_val.device)
-                    loss = calculate_loss(
-                        output_power_val, target_power_val, criterion, lsm_expanded
-                    )
-                    val_loss += loss.item()
+            val_loss, best_model, epochs_since_last_improvement = validate(
+                model,
+                val_loader,
+                criterion,
+                aux_constants,
+                device,
+                writer,
+                logger,
+                res_path,
+                best_loss,
+                epoch_loss,
+                best_model,
+                epochs_since_last_improvement,
+                rank,
+                i,
+            )
 
-                val_loss /= len(val_loader)
-                print(f"Validation loss at epoch {i}: {val_loss:.4f}")
-                writer.add_scalars("Loss", {"train": epoch_loss, "val": val_loss}, i)
-                logger.info("Validate at Epoch {} : {:.3f}".format(i, val_loss))
-                png_path = os.path.join(res_path, "png_training")
-                utils.mkdirs(png_path)
-                visualize(
-                    output_power_val,
-                    target_power_val,
-                    input_surface_val,
-                    output_surface_val,
-                    target_surface_val,
-                    i,
-                    png_path,
+            if epochs_since_last_improvement >= 5:
+                print(
+                    f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
                 )
-
-                if val_loss < best_loss:
-                    best_loss = val_loss
-                    best_model = copy.deepcopy(model)
-                    if rank == 0:
-                        torch.save(
-                            best_model, os.path.join(model_save_path, "best_model.pth")
-                        )
-                        print(
-                            f"New best model saved at epoch {i} with validation loss: {val_loss:.4f}"
-                        )
-                        logger.info(f"current best model is saved at {i} epoch.")
-                    epochs_since_last_improvement = 0
-                else:
-                    epochs_since_last_improvement += 1
-                    if epochs_since_last_improvement >= 5:
-                        print(
-                            f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
-                        )
-                        logger.info(
-                            f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
-                        )
-                        break
+                logger.info(
+                    f"No improvement in validation loss for {epochs_since_last_improvement} epochs, terminating training."
+                )
+                # TODO(EliasKng): Handle this case in DDP scenario: other ranks should stop aswell
+                break
 
     return best_model
+
+
+def train_one_epoch(
+    model: nn.Module,
+    train_loader: torch.utils.data.DataLoader,
+    optimizer: torch.optim.Optimizer,
+    criterion: nn.Module,
+    aux_constants: Dict[str, torch.Tensor],
+    device: torch.device,
+    logger: Any,
+    rank: int,
+    epoch: int,
+) -> float:
+    epoch_loss = 0.0
+    print(f"Starting epoch {epoch}/{cfg.PG.TRAIN.EPOCHS}")
+
+    for id, train_data in enumerate(train_loader):
+        (
+            input,
+            input_surface,
+            target_power,
+            target_upper,
+            target_surface,
+            periods,
+        ) = train_data
+        input, input_surface, target_power = (
+            input.to(device),
+            input_surface.to(device),
+            target_power.to(device),
+        )
+        print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
+
+        optimizer.zero_grad()
+        model.train()
+        output_power, output_surface = model_inference(
+            model, input, input_surface, aux_constants
+        )
+        lsm_expanded = load_land_sea_mask(output_power.device)
+        loss = calculate_loss(output_power, target_power, criterion, lsm_expanded)
+        loss.backward()
+        optimizer.step()
+        epoch_loss += loss.item()
+
+    epoch_loss /= len(train_loader)
+    print(f"Epoch {epoch} finished with training loss: {epoch_loss:.4f}")
+    if rank == 0:
+        logger.info("Epoch {} : {:.3f}".format(epoch, epoch_loss))
+
+    return epoch_loss
+
+
+def save_model_checkpoint(
+    model: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
+    res_path: str,
+    epoch: int,
+) -> None:
+    model_save_path = os.path.join(res_path, "models")
+    utils.mkdirs(model_save_path)
+    save_file = {
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "lr_scheduler": lr_scheduler.state_dict(),
+        "epoch": epoch,
+    }
+    torch.save(save_file, os.path.join(model_save_path, "train_{}.pth".format(epoch)))
+    print("Model saved at epoch {}".format(epoch))
+
+
+def validate(
+    model: nn.Module,
+    val_loader: torch.utils.data.DataLoader,
+    criterion: nn.Module,
+    aux_constants: Dict[str, torch.Tensor],
+    device: torch.device,
+    writer: Any,
+    logger: Any,
+    res_path: str,
+    best_loss: float,
+    epoch_loss: float,
+    best_model: nn.Module,
+    epochs_since_last_improvement: int,
+    rank: int,
+    epoch: int,
+) -> Tuple[float, nn.Module, int]:
+    print(f"Starting validation at epoch {epoch}")
+    with torch.no_grad():
+        model.eval()
+        val_loss = 0.0
+        for id, val_data in enumerate(val_loader, 0):
+            (
+                input_val,
+                input_surface_val,
+                target_power_val,
+                target_upper_val,
+                target_surface_val,
+                periods_val,
+            ) = val_data
+            input_val, input_surface_val, target_power_val = (
+                input_val.to(device),
+                input_surface_val.to(device),
+                target_power_val.to(device),
+            )
+            print(f"(V) Processing batch {id + 1}/{len(val_loader)}")
+            output_power_val, output_surface_val = model_inference(
+                model, input_val, input_surface_val, aux_constants
+            )
+            lsm_expanded = load_land_sea_mask(output_power_val.device)
+            loss = calculate_loss(
+                output_power_val, target_power_val, criterion, lsm_expanded
+            )
+            val_loss += loss.item()
+
+        val_loss /= len(val_loader)
+        print(f"Validation loss at epoch {epoch}: {val_loss:.4f}")
+        writer.add_scalars("Loss", {"train": epoch_loss, "val": val_loss}, epoch)
+        logger.info("Validate at Epoch {} : {:.3f}".format(epoch, val_loss))
+        png_path = os.path.join(res_path, "png_training")
+        utils.mkdirs(png_path)
+        visualize(
+            output_power_val,
+            target_power_val,
+            input_surface_val,
+            output_surface_val,
+            target_surface_val,
+            epoch,
+            png_path,
+        )
+
+        if val_loss < best_loss:
+            best_loss = val_loss
+            best_model = copy.deepcopy(model)
+            if rank == 0:
+                torch.save(
+                    best_model, os.path.join(res_path, "models", "best_model.pth")
+                )
+                print(
+                    f"New best model saved at epoch {epoch} with validation loss: {val_loss:.4f}"
+                )
+                logger.info(f"current best model is saved at {epoch} epoch.")
+            epochs_since_last_improvement = 0
+        else:
+            epochs_since_last_improvement += 1
+
+    return val_loss, best_model, epochs_since_last_improvement
 
 
 def test(test_loader, model, device, res_path):
