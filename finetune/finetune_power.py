@@ -146,7 +146,7 @@ def setup_writer(output_path):
     return writer
 
 
-def setup_logger(type_net, horizon, output_path):
+def setup_logger(type_net: str, horizon: int, output_path: str) -> logging.Logger:
     logger_name = type_net + str(horizon)
     utils.logger_info(logger_name, os.path.join(output_path, logger_name + ".log"))
     logger = logging.getLogger(logger_name)
