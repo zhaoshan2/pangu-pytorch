@@ -7,7 +7,7 @@ from datetime import datetime
 import warnings
 from era5_data import utils, utils_data
 from era5_data.config import cfg
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Union
 import logging
 from tensorboardX import SummaryWriter
 
@@ -101,6 +101,7 @@ def train(
     logger: logging.Logger,
     start_epoch: int,
     rank: int = 0,
+    device: Union[torch.device, None] = None,
 ) -> nn.Module:
     """Training code"""
     criterion = nn.L1Loss(reduction="none")
@@ -109,11 +110,11 @@ def train(
     best_loss = float("inf")
     epochs_since_last_improvement = 0
     best_model = model
-    aux_constants = load_constants(rank)
+    aux_constants = load_constants(device)
 
     # Termination flag to signal early stopping
     early_stop_flag = torch.tensor(
-        [0], dtype=torch.int, device=f"cuda:{rank}"
+        [0], dtype=torch.int, device=device
     )  # 0 means continue, 1 means stop
 
     for i in range(start_epoch, epochs + 1):
@@ -128,6 +129,7 @@ def train(
             aux_constants,
             logger,
             rank,
+            device,
             i,
         )
         loss_list.append(epoch_loss)
@@ -152,6 +154,7 @@ def train(
                 best_model,
                 epochs_since_last_improvement,
                 rank,
+                device,
                 i,
             )
 
@@ -183,6 +186,7 @@ def train_one_epoch(
     aux_constants: Dict[str, torch.Tensor],
     logger: logging.Logger,
     rank: int,
+    device: Union[torch.device, None],
     epoch: int,
 ) -> float:
     epoch_loss = 0.0
@@ -198,9 +202,9 @@ def train_one_epoch(
             periods,
         ) = train_data
         input, input_surface, target_power = (
-            input.to(rank),
-            input_surface.to(rank),
-            target_power.to(rank),
+            input.to(device),
+            input_surface.to(device),
+            target_power.to(device),
         )
         print(f"(T) Processing batch {id + 1}/{len(train_loader)}")
 
@@ -255,6 +259,7 @@ def validate(
     best_model: nn.Module,
     epochs_since_last_improvement: int,
     rank: int,
+    device: Union[torch.device, None],
     epoch: int,
 ) -> Tuple[float, nn.Module, int]:
     print(f"Starting validation at epoch {epoch}")
@@ -271,9 +276,9 @@ def validate(
                 periods_val,
             ) = val_data
             input_val, input_surface_val, target_power_val = (
-                input_val.to(rank),
-                input_surface_val.to(rank),
-                target_power_val.to(rank),
+                input_val.to(device),
+                input_surface_val.to(device),
+                target_power_val.to(device),
             )
             print(f"(V) Processing batch {id + 1}/{len(val_loader)}")
             output_power_val, output_surface_val = model_inference(

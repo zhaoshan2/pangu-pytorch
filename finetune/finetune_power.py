@@ -153,6 +153,12 @@ def setup_logger(type_net: str, horizon: int, output_path: str) -> logging.Logge
     return logger
 
 
+def _get_device(rank: int) -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device(f"cuda:{rank}")
+    return torch.device("cpu")
+
+
 def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
     ddp_setup(rank, world_size)
 
@@ -163,6 +169,8 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
 
     writer = setup_writer(output_path)
     logger = setup_logger(args.type_net, cfg.PG.HORIZON, output_path)
+
+    device = _get_device(rank)
 
     if rank == 0:
         logger.info(f"Start finetuning {args.type_net} on energy dataset")
@@ -183,8 +191,8 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
         False,
     )
 
-    model = PanguPowerConv(device=rank).to(rank)
-    model = DDP(model, device_ids=[rank])
+    model = PanguPowerConv(device=device).to(device)
+    model = DDP(model, device_ids=[device])
 
     optimizer = Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -214,6 +222,7 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
         logger=logger,
         start_epoch=start_epoch,
         rank=rank,
+        device=device,
     )
 
     destroy_process_group()
