@@ -271,7 +271,7 @@ if __name__ == "__main__":
 
     print(f"World size: {world_size}")
 
-    if args.dist:
+    if args.dist and torch.cuda.is_available():
         mp.spawn(main, args=(args, world_size), nprocs=world_size)
     else:
         main(0, args, 1)
