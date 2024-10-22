@@ -233,11 +233,12 @@ def test_best_model(args):
     utils.mkdirs(output_path)
     logger = setup_logger(args.type_net, cfg.PG.HORIZON, output_path)
     logger.info("Begin testing...")
+    device = _get_device(0)
 
     if args.load_my_best:
         best_model = torch.load(
             os.path.join(output_path, "models/best_model.pth"),
-            map_location="cuda:0",
+            map_location=device,
             weights_only=False,
         )
 
@@ -252,7 +253,7 @@ def test_best_model(args):
     test(
         test_loader=test_dataloader,
         model=best_model,
-        device=0,
+        device=device,
         res_path=output_path,
     )
 
