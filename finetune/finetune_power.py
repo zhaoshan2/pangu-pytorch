@@ -76,7 +76,7 @@ def ddp_setup(rank, world_size):
         rank: Unique identifier of each process
         world_size: Total number of processes
     """
-    os.environ["MASTER_ADDR"] = "ftp-x86n6.localdomain"
+    os.environ["MASTER_ADDR"] = os.environ["HOSTNAME"]
     os.environ["MASTER_PORT"] = "12357"
     torch.cuda.set_device(rank)
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
@@ -249,7 +249,6 @@ def test_best_model(args):
 
 
 if __name__ == "__main__":
-    # TODO(EliasKng): Make sure the script still runs with dist = False
     parser = argparse.ArgumentParser()
     parser.add_argument("--type_net", type=str, default="PatchRecoveryAllDist")
     parser.add_argument("--load_my_best", type=bool, default=True)
