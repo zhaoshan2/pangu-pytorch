@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
         train_dataloader = data.DataLoader(
             dataset=train_dataset,
-            batch_size=cfg.PG.TRAIN.BATCH_SIZE // len(opt["gpu_ids"]),
+            batch_size=cfg.PG.TRAIN.BATCH_SIZE,
             num_workers=0,
             pin_memory=False,
             sampler=train_sampler,

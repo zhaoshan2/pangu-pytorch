@@ -171,7 +171,7 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
         cfg.PG.TRAIN.START_TIME,
         cfg.PG.TRAIN.END_TIME,
         cfg.PG.TRAIN.FREQUENCY,
-        cfg.PG.TRAIN.BATCH_SIZE // world_size,
+        cfg.PG.TRAIN.BATCH_SIZE,
         True,
         args.dist,
     )
@@ -262,5 +262,8 @@ if __name__ == "__main__":
 
     print(f"World size: {world_size}")
 
-    mp.spawn(main, args=(args, world_size), nprocs=world_size)
+    if args.dist:
+        mp.spawn(main, args=(args, world_size), nprocs=world_size)
+    else:
+        main(0, args, 1)
     test_best_model(args)
