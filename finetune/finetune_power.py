@@ -191,7 +191,7 @@ def main(rank: int, args: argparse.Namespace, world_size: int) -> None:
         False,
     )
 
-    model = PanguPowerConv(device=device).to(device)
+    model = setup_model("PanguPowerConv", device)
     model = DDP(model, device_ids=[device])
 
     optimizer = Adam(
